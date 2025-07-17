@@ -1,4 +1,33 @@
 {
+  "test_0_no_message": {
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
+    }
+  },
+
   "test_1_simple_math": {
     "openai": {
       "messages": [
@@ -379,6 +408,81 @@
         "candidateCount": 1,
         "temperature": 0,
         "topP": 1
+      },
+      "model": "models/gemini-2.0-flash"
+    }
+  },
+  "with_response_format_1": {
+    "openai": {
+      "messages": [
+        {
+          "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
+          "role": "system"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "intent",
+          "strict": true,
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "recipeName": {
+                "type": "string",
+                "description": "Name of the recipe"
+              },
+              "ingredients": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Ingredient description"
+                },
+                "description": "List of ingredients"
+              }
+            },
+            "required": ["recipeName", "ingredients"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    "gemini": {
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "List a few popular cookie recipes, and include the amounts of ingredients."
+          }
+        ]
+      },
+      "contents": null,
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1,
+        "responseMimeType": "application/json",
+        "responseSchema": {
+          "properties": {
+            "recipeName": {
+              "type": "string",
+              "description": "Name of the recipe"
+            },
+            "ingredients": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Ingredient description"
+              },
+              "description": "List of ingredients"
+            }
+          },
+          "required": ["recipeName", "ingredients"],
+          "type": "object"
+        }
       },
       "model": "models/gemini-2.0-flash"
     }

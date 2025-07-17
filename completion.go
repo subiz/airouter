@@ -79,7 +79,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 	instruction = CleanString(instruction)
 	params := openai.ChatCompletionNewParams{
 		Seed:  openai.Int(0),
-		Model: "",
+		Model: model,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(instruction),
 		},

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/subiz/header"
 	"github.com/subiz/log"
 )
 
@@ -34,9 +35,11 @@ type GeminiPart struct {
 
 // GeminiGenerationConfig represents the generation configuration.
 type GeminiGenerationConfig struct {
-	CandidateCount int     `json:"candidateCount"`
-	Temperature    float32 `json:"temperature"`
-	TopP           float32 `json:"topP"`
+	CandidateCount   int           `json:"candidateCount"`
+	Temperature      float32       `json:"temperature"`
+	TopP             float32       `json:"topP"`
+	ResponseMIMEType string        `json:"responseMimeType,omitempty"`
+	ResponseSchema   *header.JSONSchema `json:"responseSchema,omitempty"`
 }
 
 // GeminiTool is a local struct to avoid genai dependency.
@@ -48,20 +51,7 @@ type GeminiTool struct {
 type GeminiFunctionDeclaration struct {
 	Name        string        `json:"name"`
 	Description string        `json:"description"`
-	Parameters  *GeminiSchema `json:"parameters"`
-}
-
-// GeminiSchema is a local struct to avoid genai dependency.
-type GeminiSchema struct {
-	Type       string                    `json:"type,omitempty"`
-	Properties map[string]GeminiProperty `json:"properties"`
-	Required   []string                  `json:"required"`
-}
-
-// GeminiProperty is a local struct to avoid genai dependency.
-type GeminiProperty struct {
-	Type        string `json:"type,omitempty"`
-	Description string `json:"description"`
+	Parameters  *header.JSONSchema `json:"parameters"`
 }
 
 // GeminiFunctionCall is a local struct to avoid genai dependency.
@@ -80,9 +70,9 @@ type GeminiFunctionResponse struct {
 func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 	var geminiTools []*GeminiTool
 	for _, tool := range req.Tools {
-		properties := make(map[string]GeminiProperty)
+		properties := make(map[string]*header.JSONSchema)
 		for key, prop := range tool.Function.Parameters.Properties {
-			properties[key] = GeminiProperty{
+			properties[key] = &header.JSONSchema{
 				Type:        prop.Type,
 				Description: prop.Description,
 			}
@@ -92,7 +82,7 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 		decls = append(decls, &GeminiFunctionDeclaration{
 			Name:        tool.Function.Name,
 			Description: tool.Function.Description,
-			Parameters: &GeminiSchema{
+			Parameters: &header.JSONSchema{
 				Type:       "object",
 				Properties: properties,
 				Required:   tool.Function.Parameters.Required,
@@ -109,6 +99,30 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 			TopP:           req.TopP,
 		},
 		Tools: geminiTools,
+	}
+
+	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {
+		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
+		schema := req.ResponseFormat.JSONSchema.Schema
+		geminiSchema := &header.JSONSchema{
+			Type:       schema.Type,
+			Required:   schema.Required,
+			Properties: make(map[string]*header.JSONSchema),
+		}
+		for key, prop := range schema.Properties {
+			geminiProp := &header.JSONSchema{
+				Type:        prop.Type,
+				Description: prop.Description,
+			}
+			if prop.Items != nil {
+				geminiProp.Items = &header.JSONSchema{
+					Type:        prop.Items.Type,
+					Description: prop.Items.Description,
+				}
+			}
+			geminiSchema.Properties[key] = geminiProp
+		}
+		geminiReq.GenerationConfig.ResponseSchema = geminiSchema
 	}
 
 	var contents []*GeminiContent
@@ -337,7 +351,7 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 		return nil, err
 	}
 
-	// fmt.Println("REA", string(requestb))
+	 fmt.Println("REA", string(requestb))
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent?key=" + apikey
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {

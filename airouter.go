@@ -2,9 +2,10 @@ package airouter
 
 import (
 	"bytes"
-	"math"
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
 	"strings"
 
@@ -154,34 +155,48 @@ type OpenAITool struct {
 	Function Function `json:"function"`
 }
 
+type JSONSchema struct {
+	Title                string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Type                 string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"` // string, number, object, array, boolean, null
+	Description          string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	Properties           map[string]*JSONSchema `protobuf:"bytes,6,rep,name=properties,proto3" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Items                *JSONSchema            `protobuf:"bytes,7,opt,name=items,proto3" json:"items,omitempty"` // used for type array
+	MinItems             int64                  `protobuf:"varint,8,opt,name=minItems,proto3" json:"minItems,omitempty"`
+	UniqueItems          bool                   `protobuf:"varint,9,opt,name=uniqueItems,proto3" json:"uniqueItems,omitempty"`
+	ExclusiveMinimum     int64                  `protobuf:"varint,10,opt,name=exclusiveMinimum,proto3" json:"exclusiveMinimum,omitempty"`
+	Required             []string               `protobuf:"bytes,11,rep,name=required,proto3" json:"required,omitempty"`
+	AdditionalProperties bool                   `protobuf:"varint,12,opt,name=additionalProperties,proto3" json:"additionalProperties"` // chatgpt required this
+	Enum                 []string               `protobuf:"bytes,13,rep,name=enum,proto3" json:"enum,omitempty"`
+}
+
 // Function mimics the structure of a function in an OpenAI Chat Completion request.
 type Function struct {
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Parameters  Parameters `json:"parameters"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Parameters  *JSONSchema `json:"parameters"`
 }
 
-// Parameters mimics the structure of the parameters in an OpenAI Chat Completion request.
-type Parameters struct {
-	Type                 string              `json:"type,omitempty"`
-	Properties           map[string]Property `json:"properties"`
-	Required             []string            `json:"required"`
-	AdditionalProperties bool                `json:"additionalProperties"`
+// ResponseFormat specifies the format of the response.
+type ResponseFormat struct {
+	Type       string       `json:"type,omitempty"`
+	JSONSchema *RJSONSchema `json:"json_schema,omitempty"`
 }
 
-// Property mimics the structure of a property in an OpenAI Chat Completion request.
-type Property struct {
-	Type        string `json:"type,omitempty"`
-	Description string `json:"description"`
+// JSONSchema represents the JSON schema for the response format.
+type RJSONSchema struct {
+	Name   string      `json:"name"`
+	Strict bool        `json:"strict"`
+	Schema *JSONSchema `json:"schema"`
 }
 
 // OpenAIChatRequest mimics the structure of an OpenAI Chat Completion request.
 type OpenAIChatRequest struct {
-	Messages    []OpenAIChatMessage `json:"messages"`
-	Model       string              `json:"model"`
-	Temperature float32             `json:"temperature"`
-	TopP        float32             `json:"top_p"`
-	Tools       []OpenAITool        `json:"tools"`
+	Messages       []OpenAIChatMessage `json:"messages"`
+	Model          string              `json:"model"`
+	Temperature    float32             `json:"temperature"`
+	TopP           float32             `json:"top_p"`
+	Tools          []OpenAITool        `json:"tools"`
+	ResponseFormat *ResponseFormat     `json:"response_format,omitempty"`
 }
 
 // OpenAIChoice mimics the structure of a choice in an OpenAI Chat Completion response.
@@ -236,6 +251,9 @@ func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) 
 }
 
 func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []byte) ([]byte, error) {
+	rq := &OpenAIChatRequest{}
+	json.Unmarshal(request, rq)
+	request, _ = json.Marshal(rq)
 	url := "https://api.openai.com/v1/chat/completions"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request))
 	if err != nil {
@@ -248,7 +266,7 @@ func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 		return nil, err
 	}
 
-	// fmt.Println("REQ", string(request))
+	fmt.Println("REQ", string(request))
 
 	defer resp.Body.Close()
 	buf := new(bytes.Buffer)

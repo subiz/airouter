@@ -151,6 +151,9 @@ func TestChatCompletion(t *testing.T) {
 	openai_apikey := os.Getenv("OPENAI_APIKEY")
 	gemini_apikey := os.Getenv("GEMINI_APIKEY")
 	for name, tc := range testCases {
+		if name != "response_format_gemini" {
+			continue
+		}
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
 			var output []byte

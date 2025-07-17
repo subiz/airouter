@@ -435,5 +435,158 @@
         }
       }
     }
+  },
+  "response_format": {
+    "input": {
+      "messages": [
+        {
+          "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
+          "role": "system"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "intent",
+          "strict": true,
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "recipeName": {
+                "type": "string",
+                "description": "Name of the recipe"
+              },
+              "ingredients": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Ingredient description"
+                },
+                "description": "List of ingredients"
+              }
+            },
+            "required": ["recipeName", "ingredients"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    "output": {
+      "id": "chatcmpl-BuINxJtus3dLpDAECDcO1jwWSChbf",
+      "object": "chat.completion",
+      "created": 1752756741,
+      "model": "gpt-4o-mini-2024-07-18",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"recipeName\":\"Classic Chocolate Chip Cookies\",\"ingredients\":[\"2 1/4 cups all-purpose flour\",\"1/2 teaspoon baking soda\",\"1 cup unsalted butter, room temperature\",\"1/2 cup granulated sugar\",\"1 cup packed light-brown sugar\",\"1 teaspoon salt\",\"2 teaspoons pure vanilla extract\",\"2 large eggs\",\"2 cups semisweet and/or milk chocolate chips\"]}",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 78,
+        "completion_tokens": 79,
+        "total_tokens": 157,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
+  },
+  "response_format_gemini": {
+    "input": {
+      "messages": [
+        {
+          "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
+          "role": "system"
+        }
+      ],
+      "model": "gemini-2.0-flash",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "intent",
+          "strict": true,
+          "additionalProperties": false,
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "recipeName": {
+                "type": "string",
+                "description": "Name of the recipe"
+              },
+              "ingredients": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Ingredient description"
+                },
+                "description": "List of ingredients"
+              }
+            },
+            "required": ["recipeName", "ingredients"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    "output": {
+      "id": "chatcmpl-BuINxJtus3dLpDAECDcO1jwWSChbf",
+      "object": "chat.completion",
+      "created": 1752756741,
+      "model": "gpt-4o-mini-2024-07-18",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"recipeName\":\"Classic Chocolate Chip Cookies\",\"ingredients\":[\"2 1/4 cups all-purpose flour\",\"1/2 teaspoon baking soda\",\"1 cup unsalted butter, room temperature\",\"1/2 cup granulated sugar\",\"1 cup packed light-brown sugar\",\"1 teaspoon salt\",\"2 teaspoons pure vanilla extract\",\"2 large eggs\",\"2 cups semisweet and/or milk chocolate chips\"]}",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 78,
+        "completion_tokens": 79,
+        "total_tokens": 157,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
   }
 }
