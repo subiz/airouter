@@ -1,0 +1,167 @@
+{
+  "1": {
+    "gemini": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "hello"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "avgLogprobs": -0.25537941672585229
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13,
+        "candidatesTokenCount": 198,
+        "totalTokenCount": 211,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 198
+          }
+        ]
+      },
+      "modelVersion": "gemini-2.0-flash",
+      "responseId": "z3R4aLzWNqeKn9kP0ICSsAY"
+    },
+    "openai": {
+      "id": "z3R4aLzWNqeKn9kP0ICSsAY",
+      "object": "chat.completion",
+      "model": "gemini-2.0-flash",
+      "choices": [
+        {
+          "message": {
+            "role": "assistant",
+            "content": "hello",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 13,
+        "completion_tokens": 198,
+        "total_tokens": 211,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  "with_tool_calls": {
+    "gemini": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "get_user_info",
+                  "args": {
+                    "user_id": "123"
+                  }
+                }
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "avgLogprobs": -7.2453933005983178e-6
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 49,
+        "candidatesTokenCount": 11,
+        "totalTokenCount": 60,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 49
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 11
+          }
+        ]
+      },
+      "modelVersion": "gemini-2.0-flash",
+      "responseId": "qHN4aODHG9eKn9kPr_mp-Ak"
+    },
+
+    "openai": {
+      "choices": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "content": null,
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "id": "call_qHN4aODHG9eKn9kPr_mp-Ak_0",
+                "function": {
+                  "arguments": "{\"user_id\":\"123\"}",
+                  "name": "get_user_info"
+                },
+                "type": "function"
+              }
+            ]
+          }
+        }
+      ],
+      "id": "qHN4aODHG9eKn9kPr_mp-Ak",
+      "model": "gemini-2.0-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 11,
+        "prompt_tokens": 49,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "total_tokens": 60
+      }
+    }
+  },
+  "error_1": {
+    "gemini": {
+      "error": {
+        "code": 400,
+        "message": "Invalid value at 'contents[1].parts[0].function_response.response' (type.googleapis.com/google.protobuf.Struct), \"{\"name\": \"John Doe\", \"email\": \"john.doe@example.com\"}\"",
+        "status": "INVALID_ARGUMENT",
+        "details": [
+          {
+            "@type": "type.googleapis.com/google.rpc.BadRequest",
+            "fieldViolations": [
+              {
+                "field": "contents[1].parts[0].function_response.response",
+                "description": "Invalid value at 'contents[1].parts[0].function_response.response' (type.googleapis.com/google.protobuf.Struct), \"{\"name\": \"John Doe\", \"email\": \"john.doe@example.com\"}\""
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "openai": {
+      "error": {
+        "message": "Invalid value at 'contents[1].parts[0].function_response.response' (type.googleapis.com/google.protobuf.Struct), \"{\"name\": \"John Doe\", \"email\": \"john.doe@example.com\"}\"",
+        "type": "invalid_request_error",
+        "param": "contents[1].parts[0].function_response.response"
+      }
+    }
+  }
+}

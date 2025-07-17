@@ -1,0 +1,386 @@
+{
+  "test_1_simple_math": {
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator" },
+        { "role": "user", "content": "1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "You are a calculator"
+          }
+        ]
+      },
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
+    }
+  },
+  "tool_call": {
+    "openai": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+              "type": "function",
+              "function": {
+                "name": "compare_cars",
+                "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+              }
+            }
+          ],
+          "refusal": null,
+          "annotations": []
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+          "content": "toi khong biet"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam."
+          }
+        ]
+      },
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "So sanh vinfast va bmw"
+            }
+          ],
+          "role": "user"
+        },
+        {
+          "parts": [
+            {
+              "functionCall": {
+                "name": "compare_cars",
+                "args": {
+                  "base_car_name": "VinFast",
+                  "compare_car_name": "BMW"
+                }
+              }
+            }
+          ],
+          "role": "model"
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "functionResponse": {
+                "name": "compare_cars",
+                "response": {
+                  "text": "toi khong biet"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "compare_cars",
+              "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "base_car_name": {
+                    "type": "string",
+                    "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                  },
+                  "compare_car_name": {
+                    "type": "string",
+                    "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                  }
+                },
+                "required": ["base_car_name", "compare_car_name"]
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      }
+    }
+  },
+
+  "tool_call_empty_param": {
+    "openai": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+              "type": "function",
+              "function": {
+                "name": "compare_cars",
+                "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+              }
+            }
+          ],
+          "refusal": null,
+          "annotations": []
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+          "content": "toi khong biet"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam."
+          }
+        ]
+      },
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "So sanh vinfast va bmw"
+            }
+          ],
+          "role": "user"
+        },
+        {
+          "parts": [
+            {
+              "functionCall": {
+                "name": "compare_cars",
+                "args": {
+                  "base_car_name": "VinFast",
+                  "compare_car_name": "BMW"
+                }
+              }
+            }
+          ],
+          "role": "model"
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "functionResponse": {
+                "name": "compare_cars",
+                "response": {
+                  "text": "toi khong biet"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "compare_cars",
+              "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "base_car_name": {
+                    "type": "string",
+                    "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                  },
+                  "compare_car_name": {
+                    "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                  }
+                },
+                "required": ["base_car_name", "compare_car_name"]
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      }
+    }
+  },
+
+  "test_6_conversation_history": {
+    "openai": {
+      "messages": [
+        { "role": "user", "content": "My favorite color is blue." },
+        { "role": "assistant", "content": "That's a great color!" },
+        { "role": "user", "content": "What is my favorite color?" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "My favorite color is blue."
+            }
+          ],
+          "role": "user"
+        },
+        {
+          "parts": [
+            {
+              "text": "That's a great color!"
+            }
+          ],
+          "role": "model"
+        },
+        {
+          "parts": [
+            {
+              "text": "What is my favorite color?"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      }
+    }
+  },
+  "test_7_no_user_messages": {
+    "openai": {
+      "messages": [{ "role": "system", "content": "This is a system prompt." }],
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "top_p": 1
+    },
+    "gemini": {
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "This is a system prompt."
+          }
+        ]
+      },
+      "contents": null,
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      },
+      "model": "models/gemini-2.0-flash"
+    }
+  }
+}

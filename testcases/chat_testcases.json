@@ -1,0 +1,439 @@
+{
+  "test_1_simple_math": {
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a calculator. Just give the final answer"
+        },
+        { "role": "user", "content": "1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "output": {
+      "object": "chat.completion",
+      "created": 1752740254,
+      "model": "gpt-4o-mini-2024-07-18",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "2",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 24,
+        "completion_tokens": 1,
+        "total_tokens": 25,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
+  },
+  "test_2_simple_math": {
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a calculator. Just give the final answer"
+        },
+        { "role": "user", "content": "1+1" }
+      ],
+      "model": "gemini-2.0-flash",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "output": {
+      "object": "chat.completion",
+      "model": "gemini-2.0-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "2\n",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 13,
+        "completion_tokens": 2,
+        "total_tokens": 15,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  "test_function_call": {
+    "input": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "output": {
+      "id": "chatcmpl-BuFHGvjRtr8QjsRYrzIUowmv5At0s",
+      "object": "chat.completion",
+      "created": 1752744794,
+      "model": "gpt-4o-mini-2024-07-18",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_RBIlJG8WNhU5usTETGLvu3S3",
+                "type": "function",
+                "function": {
+                  "name": "compare_cars",
+                  "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+                }
+              }
+            ],
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 148,
+        "completion_tokens": 40,
+        "total_tokens": 188,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
+  },
+  "test_function_call_gemini": {
+    "input": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh 2 xe vinfast 12 va bmw 4",
+          "role": "user"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "output": {
+      "id": "chatcmpl-BuFHGvjRtr8QjsRYrzIUowmv5At0s",
+      "object": "chat.completion",
+      "created": 1752744794,
+      "model": "gemini-2.5-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_RBIlJG8WNhU5usTETGLvu3S3",
+                "type": "function",
+                "function": {
+                  "name": "compare_cars",
+                  "arguments": "{\"base_car_name\":\"vinfast 12\",\"compare_car_name\":\"bmw 4\"}"
+                }
+              }
+            ],
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 157,
+        "completion_tokens": 35,
+        "total_tokens": 313,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  "test_tool_call_finished": {
+    "input": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+              "type": "function",
+              "function": {
+                "name": "compare_cars",
+                "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+              }
+            }
+          ],
+          "refusal": null,
+          "annotations": []
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+          "name": "get_user",
+          "content": "toi khong biet"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "output": {
+      "id": "chatcmpl-BuBbBOsNkDwroGCQc1HTT3lEemA3j",
+      "object": "chat.completion",
+      "created": 1752730653,
+      "model": "gpt-4o-mini-2024-07-18",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Xin lỗi, tôi không thể so sánh trực tiếp giữa VinFast và BMW. Tuy nhiên, bạn có thể cho tôi biết cụ thể mẫu xe nào của VinFast và BMW mà bạn muốn so sánh không?",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 186,
+        "completion_tokens": 45,
+        "total_tokens": 231,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
+  },
+  "test_tool_call_finished_gemini": {
+    "input": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+              "type": "function",
+              "function": {
+                "name": "compare_cars",
+                "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+              }
+            }
+          ],
+          "refusal": null,
+          "annotations": []
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+          "name": "get_user",
+          "content": "toi khong biet"
+        }
+      ],
+      "model": "gemini-2.0-flash",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "output": {
+      "object": "chat.completion",
+      "model": "gemini-2.0-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Tôi rất tiếc, tôi không có đủ thông tin để so sánh hai dòng xe này.",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 140,
+        "completion_tokens": 19,
+        "total_tokens": 159,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  }
+}
