@@ -162,7 +162,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			q.Set("x-purpose", id)
 		}
 
-		url := "https://api.subiz.com.vn/ai/completions?" + q.Encode()
+		url := "https://api.subiz.com.vn/4.1/ai/completions?" + q.Encode()
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestbody))
 		if err != nil {
 			return "", nil, log.EServer(err)
