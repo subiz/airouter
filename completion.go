@@ -42,7 +42,7 @@ func Init(apikey string) {
 	_apikey = apikey
 }
 
-func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string, stopAfterFunctionCall bool) (string, *CompletionOutput, error) {
+func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string, stopAfterFunctionCall bool) (string, CompletionOutput, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -126,8 +126,9 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		}
 	}
 	if len(cache) > 0 {
-		completion := &CompletionOutput{}
-		json.Unmarshal(cache, completion)
+		completion := CompletionOutput{}
+		json.Unmarshal(cache, &completion)
+		completion.FpvCostUSD = 0
 		return completion.Content, completion, nil
 	}
 
@@ -165,7 +166,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		url := "https://api.subiz.com.vn/4.1/ai/completions?" + q.Encode()
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestbody))
 		if err != nil {
-			return "", nil, log.EServer(err)
+			return "", CompletionOutput{}, log.EServer(err)
 		}
 
 		req.Header.Set("Authorization", "Bearer "+_apikey)
@@ -174,7 +175,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		log.Info(accid, log.Stack(), "SUBMITCHATGTPLLM INSTRUCTION", convoid, string(requestbody), time.Since(te))
 
 		if err != nil {
-			return "", nil, log.EProvider(err, "openai", "completion")
+			return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
 		}
 
 		defer resp.Body.Close()
@@ -183,7 +184,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		output := buf.Bytes()
 
 		if resp.StatusCode != 200 {
-			return "", nil, log.EProvider(err, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+			return "", CompletionOutput{}, log.EProvider(err, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 		}
 
 		pricestr := resp.Header.Get("X-Cost-USD")
@@ -229,7 +230,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 	}
 
 exit:
-	completionoutput := &CompletionOutput{
+	completionoutput := CompletionOutput{
 		Request:    requestbody,
 		DurationMs: time.Now().UnixMilli() - start.UnixMilli(),
 		Created:    start.UnixMilli(),
@@ -245,7 +246,7 @@ exit:
 		completionoutput.Refusal = completion.Choices[0].Message.Refusal
 		completionoutput.Content = completion.Choices[0].Message.GetContent()
 	}
-	b, _ := json.Marshal(completionoutput)
+	b, _ := json.Marshal(&completionoutput)
 	err = os.WriteFile(cachepath, b, 0644)
 
 	if totalprice, _ := ctx.Value("total_cost").(*CompletionOutput); totalprice != nil {

@@ -21,6 +21,7 @@ const Gpt_4_1 = "gpt-4.1"
 const Gemini_2_0_flash = "gemini-2.0-flash"
 const Gemini_2_5_pro = "gemini-2.5-pro"
 const Gemini_2_5_flash = "gemini-2.5-flash"
+const Gemini_1_5_flash = "gemini-1.5-flash"
 
 const USD_TO_VND = 25_575
 
@@ -50,6 +51,10 @@ func ToModel(model string) string {
 		return Gpt_4o_mini
 	}
 
+	if model == "gemini-1.5-flash" {
+		return Gemini_1_5_flash
+	}
+
 	if model == "gemini-2.0-flash" {
 		return Gemini_2_0_flash
 	}
@@ -75,6 +80,10 @@ func ToGeminiModel(model string) string {
 		return Gemini_2_0_flash
 	}
 
+	if model == Gpt_4_1_nano {
+		return Gemini_1_5_flash
+	}
+
 	if model == Gpt_4o || model == Gpt_4_1 {
 		return Gemini_2_5_pro
 	}
@@ -97,6 +106,7 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-4o-mini":  0.15,
 	"gpt-4o":       2.5,
 
+	"gemini-1.5-flash": 0.15,
 	"gemini-2.0-flash": 0.1,
 	"gemini-2.5-flash": 0.30,
 	"gemini-2.5-pro":   2.5,
@@ -110,6 +120,7 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-4o":       10,
 	"gpt-4o-mini":  0.6,
 
+	"gemini-1.5-flash": 0.6,
 	"gemini-2.0-flash": 0.4,
 	"gemini-2.5-flash": 2.5,
 	"gemini-2.5-pro":   15,
@@ -123,7 +134,8 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-4o":       1.25,
 	"gpt-4o-mini":  0.075,
 
-	"gemini-2.0-flash": 0.4, // no caching
+	"gemini-1.5-flash": 0.15, // nocaching
+	"gemini-2.0-flash": 0.1,  // no caching
 	"gemini-2.5-flash": 0.225,
 	"gemini-2.5-pro":   11.25,
 }
@@ -239,12 +251,14 @@ type OpenAIError struct {
 
 // OpenAIChatResponse mimics the structure of an OpenAI Chat Completion response.
 type OpenAIChatResponse struct {
-	ID      string         `json:"id,omitempty"`
-	Object  string         `json:"object,omitempty"`
-	Model   string         `json:"model,omitempty"`
-	Choices []OpenAIChoice `json:"choices,omitempty"`
-	Usage   *Usage         `json:"usage,omitempty"`
-	Error   *OpenAIError   `json:"error,omitempty"`
+	ID          string         `json:"id,omitempty"`
+	Created     int64          `json:"created,omitempty"`
+	Object      string         `json:"object,omitempty"`
+	Model       string         `json:"model,omitempty"`
+	Choices     []OpenAIChoice `json:"choices,omitempty"`
+	Usage       *Usage         `json:"usage,omitempty"`
+	Error       *OpenAIError   `json:"error,omitempty"`
+	ServiceTire string         `json:"service_tier,omitempty"`
 }
 
 func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) (*OpenAIChatResponse, error) {
