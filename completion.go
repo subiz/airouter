@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	openai "github.com/openai/openai-go"
-	"github.com/openai/openai-go/shared"
 	"github.com/subiz/header"
 	"github.com/subiz/log"
 )
@@ -50,85 +48,68 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 	}
 
 	start := time.Now()
-	var tools []openai.ChatCompletionToolParam
+	var tools []OpenAITool
 	var fnM = map[string]*AIFunction{}
 	for _, fn := range functions {
 		fnM[fn.Name] = fn
-		f := openai.ChatCompletionToolParam{
-			Function: openai.FunctionDefinitionParam{
+		f := OpenAITool{
+			Type: "function",
+			Function: Function{
 				Name:        fn.Name,
-				Description: openai.String(fn.Description),
-				Parameters: openai.FunctionParameters(map[string]any{
-					"type":                 fn.Parameters.GetType(),
-					"properties":           fn.Parameters.GetProperties(),
-					"additionalProperties": false,
-					"required":             fn.Parameters.GetRequired(),
-				}),
+				Description: fn.Description,
+				Parameters: &JSONSchema{
+					Type:                 fn.Parameters.GetType(),
+					AdditionalProperties: false,
+					Required:             fn.Parameters.GetRequired(),
+				},
 			},
 		}
 		if fn.Parameters == nil {
-			f.Function.Parameters = openai.FunctionParameters(map[string]any{
-				"type":       "object",
-				"properties": &header.JSONSchema{},
-				"required":   []string{},
-			})
+			f.Function.Parameters = &JSONSchema{
+				Type:       "object",
+				Properties: map[string]*JSONSchema{},
+				Required:   []string{},
+			}
+		} else {
+			properties := map[string]*JSONSchema{}
+			for k, v := range fn.Parameters.Properties {
+				properties[k] = toOpenAISchema(v)
+			}
+			f.Function.Parameters.Properties = properties
 		}
 		tools = append(tools, f)
 	}
 
 	instruction = CleanString(instruction)
-	params := openai.ChatCompletionNewParams{
-		Seed:  openai.Int(0),
-		Model: model,
-		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.SystemMessage(instruction),
-		},
-		Temperature: openai.Float(0.0),
-		TopP:        openai.Float(1.0),
+	params := OpenAIChatRequest{
+		Seed:        0,
+		Model:       model,
+		Messages:    []OpenAIChatMessage{{Role: "system", Content: &instruction}},
+		Temperature: 0.0,
+		TopP:        1.0,
 	}
 
 	if toolchoice != "" {
-		params.ToolChoice = openai.ChatCompletionToolChoiceOptionUnionParam{OfAuto: openai.String(toolchoice)}
+		params.ToolChoice = toolchoice
 	}
 
 	for _, entry := range histories {
+		content := entry.Content
 		if entry.Role == "user" {
 			// param.Messages = append(param.Messages, completion.Choices[0].Message.ToParam())
 			// param.Messages = append(param.Messages, openai.UserMessage("How big are those?"))
-			params.Messages = append(params.Messages, openai.UserMessage(entry.Content))
+			params.Messages = append(params.Messages, OpenAIChatMessage{Role: "user", Content: &content})
 		} else if entry.Role == "system" {
-			params.Messages = append(params.Messages, openai.SystemMessage(entry.Content))
+			params.Messages = append(params.Messages, OpenAIChatMessage{Role: "system", Content: &content})
 		} else {
-			params.Messages = append(params.Messages, openai.AssistantMessage(entry.Content))
+			params.Messages = append(params.Messages, OpenAIChatMessage{Role: "assistant", Content: &content})
 		}
 	}
 
-	if responseformat != nil {
-		b, _ := json.Marshal(responseformat.Schema)
-		schema := map[string]any{}
-		json.Unmarshal(b, &schema)
-		if !responseformat.Schema.AdditionalProperties {
-			schema["additionalProperties"] = false // omitted when json marshal but required by OPENAI, so we must manually set it
-		}
-		addAdditionalProp(schema)
-
-		params.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
-			OfJSONSchema: &shared.ResponseFormatJSONSchemaParam{
-				JSONSchema: openai.ResponseFormatJSONSchemaJSONSchemaParam{
-					Name: responseformat.Name,
-					// Description: openai.F("Notable information about a person"),
-					Schema: any(schema),
-					Strict: openai.Bool(responseformat.Strict),
-				},
-			},
-		}
-
-	}
 	if len(tools) > 0 {
 		params.Tools = tools
 	}
 
-	completion := &openai.ChatCompletion{}
 	var err error
 	functioncalled := false
 	requestbody, _ := json.Marshal(params)
@@ -151,9 +132,10 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 	}
 
 	var totalCost int64
-	tokenUsages := []openai.CompletionUsage{}
+	tokenUsages := []*Usage{}
+	completion := &OpenAIChatResponse{}
 
-	for i := 0; i < 5; i++ { // max 5 loops
+	for range 5 { // max 5 loops
 		requestbody, _ = json.Marshal(params)
 		if stopAfterFunctionCall && functioncalled {
 			break
@@ -223,7 +205,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		}
 
 		// If there is a was a function call, continue the conversation
-		params.Messages = append(params.Messages, completion.Choices[0].Message.ToParam())
+		params.Messages = append(params.Messages, completion.Choices[0].Message)
 		for _, toolCall := range toolCalls {
 			var output string
 			var callid string
@@ -238,8 +220,11 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			if stop {
 				goto exit
 			}
-			mx := openai.ToolMessage(output, toolCall.ID)
-			params.Messages = append(params.Messages, mx)
+			params.Messages = append(params.Messages, OpenAIChatMessage{
+				Content:    &output,
+				Role:       "tool",
+				ToolCallId: toolCall.ID,
+			})
 		}
 	}
 
@@ -258,10 +243,14 @@ exit:
 
 	if len(completion.Choices) > 0 {
 		completionoutput.Refusal = completion.Choices[0].Message.Refusal
-		completionoutput.Content = completion.Choices[0].Message.Content
+		completionoutput.Content = completion.Choices[0].Message.GetContent()
 	}
 	b, _ := json.Marshal(completionoutput)
 	err = os.WriteFile(cachepath, b, 0644)
+
+	if totalprice, _ := ctx.Value("total_cost").(*CompletionOutput); totalprice != nil {
+		totalprice.FpvCostUSD += totalCost
+	}
 	return completionoutput.Content, completionoutput, err
 }
 
@@ -311,4 +300,34 @@ func addAdditionalProp(schema map[string]any) {
 func CleanString(str string) string {
 	str = strings.Join(strings.Split(str, "\000"), "")
 	return strings.ToValidUTF8(str, "")
+}
+
+func toOpenAISchema(h *header.JSONSchema) *JSONSchema {
+	if h == nil {
+		return &JSONSchema{}
+	}
+
+	p := &JSONSchema{
+		Title:                h.Title,
+		Type:                 h.Type,
+		Description:          h.Description,
+		MinItems:             h.MinItems,
+		UniqueItems:          h.UniqueItems,
+		ExclusiveMinimum:     h.ExclusiveMinimum,
+		Required:             h.Required,
+		AdditionalProperties: h.AdditionalProperties,
+		Enum:                 h.Enum,
+	}
+
+	if h.Items != nil {
+		p.Items = toOpenAISchema(h.Items)
+	}
+
+	if len(h.Properties) > 0 {
+		p.Properties = map[string]*JSONSchema{}
+	}
+	for k, v := range h.Properties {
+		p.Properties[k] = toOpenAISchema(v)
+	}
+	return p
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/subiz/header"
 	"github.com/subiz/log"
@@ -35,10 +36,10 @@ type GeminiPart struct {
 
 // GeminiGenerationConfig represents the generation configuration.
 type GeminiGenerationConfig struct {
-	CandidateCount   int           `json:"candidateCount"`
-	Temperature      float32       `json:"temperature"`
-	TopP             float32       `json:"topP"`
-	ResponseMIMEType string        `json:"responseMimeType,omitempty"`
+	CandidateCount   int                `json:"candidateCount"`
+	Temperature      float32            `json:"temperature"`
+	TopP             float32            `json:"topP"`
+	ResponseMIMEType string             `json:"responseMimeType,omitempty"`
 	ResponseSchema   *header.JSONSchema `json:"responseSchema,omitempty"`
 }
 
@@ -49,8 +50,8 @@ type GeminiTool struct {
 
 // GeminiFunctionDeclaration is a local struct to avoid genai dependency.
 type GeminiFunctionDeclaration struct {
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
 	Parameters  *header.JSONSchema `json:"parameters"`
 }
 
@@ -128,13 +129,12 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 	var contents []*GeminiContent
 	toolCallsByID := make(map[string]ToolCall)
 
+	systemmsgs := []string{}
 	for _, msg := range req.Messages {
 		switch msg.Role {
 		case "system":
 			if msg.Content != nil {
-				geminiReq.SystemInstruction = &GeminiContent{
-					Parts: []*GeminiPart{{Text: msg.Content}},
-				}
+				systemmsgs = append(systemmsgs, *msg.Content)
 			}
 		case "user":
 			contents = append(contents, &GeminiContent{
@@ -178,6 +178,16 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 			}
 		}
 	}
+
+	if len(contents) == 0 {
+		contents = []*GeminiContent{{Role: "user", Parts: strsToParts(systemmsgs)}}
+		systemmsgs = nil
+	}
+
+	if len(systemmsgs) > 0 {
+		geminiReq.SystemInstruction = &GeminiContent{Parts: strsToParts(systemmsgs)}
+	}
+
 	if len(contents) > 0 {
 		geminiReq.Contents = contents
 	}
@@ -323,11 +333,11 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 
 	if res.UsageMetadata != nil {
 		usage = &Usage{
-			PromptTokens:     int(res.UsageMetadata.PromptTokenCount),
-			CompletionTokens: int(res.UsageMetadata.CandidatesTokenCount + res.UsageMetadata.ThoughtsTokenCount),
-			TotalTokens:      int(res.UsageMetadata.TotalTokenCount),
+			PromptTokens:     int64(res.UsageMetadata.PromptTokenCount),
+			CompletionTokens: int64(res.UsageMetadata.CandidatesTokenCount + res.UsageMetadata.ThoughtsTokenCount),
+			TotalTokens:      int64(res.UsageMetadata.TotalTokenCount),
 			PromptTokensDetails: &PromptTokensDetails{
-				CachedTokens: int(res.UsageMetadata.CachedContentTokenCount),
+				CachedTokens: int64(res.UsageMetadata.CachedContentTokenCount),
 			},
 		}
 	}
@@ -351,7 +361,7 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 		return nil, err
 	}
 
-	 fmt.Println("REA", string(requestb))
+	// fmt.Println("REA", string(requestb))
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent?key=" + apikey
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
@@ -376,4 +386,15 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 		return nil, err
 	}
 	return json.Marshal(out)
+}
+
+func strsToParts(strs []string) []*GeminiPart {
+	out := []*GeminiPart{}
+	for _, str := range strs {
+		str = strings.TrimSpace(str)
+		if str != "" {
+			out = append(out, &GeminiPart{Text: &str})
+		}
+	}
+	return out
 }

@@ -396,14 +396,16 @@
       "top_p": 1
     },
     "gemini": {
-      "systemInstruction": {
-        "parts": [
-          {
-            "text": "This is a system prompt."
-          }
-        ]
-      },
-      "contents": null,
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "This is a system prompt."
+            }
+          ]
+        }
+      ],
       "generationConfig": {
         "candidateCount": 1,
         "temperature": 0,
@@ -452,14 +454,16 @@
       }
     },
     "gemini": {
-      "systemInstruction": {
-        "parts": [
-          {
-            "text": "List a few popular cookie recipes, and include the amounts of ingredients."
-          }
-        ]
-      },
-      "contents": null,
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "List a few popular cookie recipes, and include the amounts of ingredients."
+            }
+          ]
+        }
+      ],
       "generationConfig": {
         "candidateCount": 1,
         "temperature": 0,

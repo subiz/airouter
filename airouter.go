@@ -134,6 +134,15 @@ type OpenAIChatMessage struct {
 	Content    *string    `json:"content"` // Use pointer to allow for null content
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallId string     `json:"tool_call_id,omitempty"`
+	Refusal    string     `json:"refusal,omitempty"`
+}
+
+func (m *OpenAIChatMessage) GetContent() string {
+	if m.Content == nil {
+		return ""
+	}
+
+	return *m.Content
 }
 
 // ToolCall represents a tool call in an OpenAI response.
@@ -191,12 +200,14 @@ type RJSONSchema struct {
 
 // OpenAIChatRequest mimics the structure of an OpenAI Chat Completion request.
 type OpenAIChatRequest struct {
+	Seed           int                 `json:"int"`
 	Messages       []OpenAIChatMessage `json:"messages"`
 	Model          string              `json:"model"`
 	Temperature    float32             `json:"temperature"`
 	TopP           float32             `json:"top_p"`
 	Tools          []OpenAITool        `json:"tools"`
 	ResponseFormat *ResponseFormat     `json:"response_format,omitempty"`
+	ToolChoice     string              `json:"tool_choice"`
 }
 
 // OpenAIChoice mimics the structure of a choice in an OpenAI Chat Completion response.
@@ -208,14 +219,14 @@ type OpenAIChoice struct {
 
 // PromptTokensDetails mimics the structure of the prompt_tokens_details field.
 type PromptTokensDetails struct {
-	CachedTokens int `json:"cached_tokens"`
+	CachedTokens int64 `json:"cached_tokens"`
 }
 
 // Usage mimics the structure of the usage field in an OpenAI Chat Completion response.
 type Usage struct {
-	PromptTokens        int                  `json:"prompt_tokens"`
-	CompletionTokens    int                  `json:"completion_tokens"`
-	TotalTokens         int                  `json:"total_tokens"`
+	PromptTokens        int64                `json:"prompt_tokens"`
+	CompletionTokens    int64                `json:"completion_tokens"`
+	TotalTokens         int64                `json:"total_tokens"`
 	PromptTokensDetails *PromptTokensDetails `json:"prompt_tokens_details,omitempty"`
 }
 
@@ -283,7 +294,7 @@ func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 // usd fpv
 func CalculateCost(model string, usage *Usage) int64 {
 	inputtoken := usage.PromptTokens
-	var cachedtoken int
+	var cachedtoken int64
 	if usage.PromptTokensDetails != nil {
 		inputtoken -= usage.PromptTokensDetails.CachedTokens
 		cachedtoken = usage.PromptTokensDetails.CachedTokens
