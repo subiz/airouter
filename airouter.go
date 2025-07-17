@@ -2,7 +2,9 @@ package airouter
 
 import (
 	"bytes"
+	"math"
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -90,18 +92,39 @@ func ToGeminiModel(model string) string {
 var llmmodelinputprice = map[string]float64{
 	"gpt-4.1":      2,
 	"gpt-4.1-mini": 0.4,
+	"gpt-4.1-nano": 0.1,
 	"gpt-4o-mini":  0.15,
 	"gpt-4o":       2.5,
-	"gpt-4.1-nano": 0.1,
+
+	"gemini-2.0-flash": 0.1,
+	"gemini-2.5-flash": 0.30,
+	"gemini-2.5-pro":   2.5,
 }
 
 // per 1M tokens
 var llmmodeloutputprice = map[string]float64{
 	"gpt-4.1":      8,
 	"gpt-4.1-mini": 1.6,
+	"gpt-4.1-nano": 0.4,
 	"gpt-4o":       10,
 	"gpt-4o-mini":  0.6,
-	"gpt-4.1-nano": 0.4,
+
+	"gemini-2.0-flash": 0.4,
+	"gemini-2.5-flash": 2.5,
+	"gemini-2.5-pro":   15,
+}
+
+// per 1M tokens
+var llmmodelcachedprice = map[string]float64{
+	"gpt-4.1":      8,
+	"gpt-4.1-mini": 0.1,
+	"gpt-4.1-nano": 0.025,
+	"gpt-4o":       1.25,
+	"gpt-4o-mini":  0.075,
+
+	"gemini-2.0-flash": 0.4, // no caching
+	"gemini-2.5-flash": 0.225,
+	"gemini-2.5-pro":   11.25,
 }
 
 // OpenAIChatMessage mimics the structure of a message in an OpenAI Chat Completion request.
@@ -198,7 +221,21 @@ type OpenAIChatResponse struct {
 	Error   *OpenAIError   `json:"error,omitempty"`
 }
 
-func ChatCompleteChatGPT(ctx context.Context, apikey, model string, request []byte) ([]byte, error) {
+func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) (*OpenAIChatResponse, error) {
+	var output []byte
+	var err error
+	if strings.HasPrefix(model, "gemini") {
+		output, err = chatCompleteGemini(ctx, apikey, model, request)
+	} else {
+		output, err = chatCompleteChatGPT(ctx, apikey, model, request)
+	}
+
+	response := &OpenAIChatResponse{}
+	err = json.Unmarshal(output, response)
+	return response, err
+}
+
+func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []byte) ([]byte, error) {
 	url := "https://api.openai.com/v1/chat/completions"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request))
 	if err != nil {
@@ -223,4 +260,18 @@ func ChatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 	}
 
 	return output, nil
+}
+
+// usd fpv
+func CalculateCost(model string, usage *Usage) int64 {
+	inputtoken := usage.PromptTokens
+	var cachedtoken int
+	if usage.PromptTokensDetails != nil {
+		inputtoken -= usage.PromptTokensDetails.CachedTokens
+		cachedtoken = usage.PromptTokensDetails.CachedTokens
+	}
+	outputtoken := usage.CompletionTokens
+	return int64(math.Ceil(float64(inputtoken)*llmmodelinputprice[ToModel(model)] +
+		float64(cachedtoken)*llmmodelcachedprice[ToModel(model)] +
+		float64(outputtoken)*llmmodeloutputprice[ToModel(model)]))
 }

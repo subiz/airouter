@@ -157,11 +157,11 @@ func TestChatCompletion(t *testing.T) {
 			b, _ := json.Marshal(tc.Input)
 
 			if strings.HasPrefix(tc.Input.Model, "gpt") {
-				output, err = ChatCompleteChatGPT(ctx, openai_apikey, tc.Input.Model, b)
+				output, err = chatCompleteChatGPT(ctx, openai_apikey, tc.Input.Model, b)
 			}
 
 			if strings.HasPrefix(tc.Input.Model, "gemini") {
-				output, err = ChatCompleteGemini(ctx, gemini_apikey, tc.Input.Model, b)
+				output, err = chatCompleteGemini(ctx, gemini_apikey, tc.Input.Model, b)
 			}
 
 			if err != nil {
@@ -206,6 +206,34 @@ func TestChatCompletion(t *testing.T) {
 			// 5. Compare the maps.
 			if !cmp.Equal(expectedMap, actualMap) {
 				t.Errorf("Response JSON mismatch (-want +got):\n%s", cmp.Diff(expectedMap, actualMap))
+			}
+		})
+	}
+}
+
+type CostTestCase struct {
+	Cost  int64  `json:"cost"`
+	Model string `json:"model"`
+	Usage *Usage `json:"usage"`
+}
+
+func TestCost(t *testing.T) {
+	// Read the test cases from the JSON file
+	file, err := os.ReadFile("./testcases/costcalc_testcase.json")
+	if err != nil {
+		t.Fatalf("Failed to read test cases file: %v", err)
+	}
+
+	var testCases map[string]CostTestCase
+	if err := json.Unmarshal(file, &testCases); err != nil {
+		t.Fatalf("Failed to unmarshal test cases: %v", err)
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			output := CalculateCost(tc.Model, tc.Usage)
+			if output != tc.Cost {
+				t.Errorf("Testcase %s, expect %d, got %d", name, tc.Cost, output)
 			}
 		})
 	}

@@ -327,7 +327,7 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 	}, nil
 }
 
-func ChatCompleteGemini(ctx context.Context, apikey, model string, requestb []byte) ([]byte, error) {
+func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []byte) ([]byte, error) {
 	request := OpenAIChatRequest{}
 	json.Unmarshal(requestb, &request)
 

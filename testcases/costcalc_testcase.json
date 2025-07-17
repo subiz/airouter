@@ -1,0 +1,97 @@
+{
+  "0": {
+    "model": "gemini-2.5-flash",
+    "cost": 0,
+    "usage": {}
+  },
+  "1": {
+    "model": "gpt-4o-mini",
+    "cost": 5,
+    "usage": {
+      "prompt_tokens": 24,
+      "completion_tokens": 1,
+      "total_tokens": 25,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  "2": {
+    "model": "gpt-4o-mini",
+    "cost": 4,
+    "usage": {
+      "prompt_tokens": 13,
+      "completion_tokens": 2,
+      "total_tokens": 15,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  "3": {
+    "model": "gpt-4o-mini",
+    "cost": 47,
+    "usage": {
+      "prompt_tokens": 148,
+      "completion_tokens": 40,
+      "total_tokens": 188,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    }
+  },
+  "4": {
+    "model": "gpt",
+    "cost": 223,
+    "usage": {
+      "prompt_tokens": 157,
+      "completion_tokens": 332,
+      "total_tokens": 489,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  "5": {
+    "model": "gemini",
+    "cost": 37,
+    "usage": {
+      "prompt_tokens": 186,
+      "completion_tokens": 45,
+      "total_tokens": 231,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    }
+  },
+  "6": {
+    "model": "gpt-4o-mini",
+    "cost": 24,
+    "usage": {
+      "prompt_tokens": 140,
+      "completion_tokens": 19,
+      "total_tokens": 159,
+      "prompt_tokens_details": {
+        "cached_tokens": 120,
+        "audio_tokens": 0
+      }
+    }
+  }
+}
