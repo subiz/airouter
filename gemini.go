@@ -212,10 +212,11 @@ type LocalPart struct {
 
 // LocalUsageMetadata mirrors genai.UsageMetadata
 type LocalUsageMetadata struct {
-	PromptTokenCount        int32 `json:"promptTokenCount"`
-	CandidatesTokenCount    int32 `json:"candidatesTokenCount"`
-	TotalTokenCount         int32 `json:"totalTokenCount"`
-	CachedContentTokenCount int32 `json:"cachedContentTokenCount"`
+	PromptTokenCount        int32 `json:"promptTokenCount,omitempty"`
+	CandidatesTokenCount    int32 `json:"candidatesTokenCount,omitempty"`
+	TotalTokenCount         int32 `json:"totalTokenCount,omitempty"`
+	CachedContentTokenCount int32 `json:"cachedContentTokenCount,omitempty"`
+	ThoughtsTokenCount      int32 `json:"thoughtsTokenCount,omitempty"`
 }
 
 // GeminiAPIResponse is a wrapper for the Gemini API response.
@@ -309,7 +310,7 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 	if res.UsageMetadata != nil {
 		usage = &Usage{
 			PromptTokens:     int(res.UsageMetadata.PromptTokenCount),
-			CompletionTokens: int(res.UsageMetadata.CandidatesTokenCount),
+			CompletionTokens: int(res.UsageMetadata.CandidatesTokenCount + res.UsageMetadata.ThoughtsTokenCount),
 			TotalTokens:      int(res.UsageMetadata.TotalTokenCount),
 			PromptTokensDetails: &PromptTokensDetails{
 				CachedTokens: int(res.UsageMetadata.CachedContentTokenCount),
@@ -336,7 +337,7 @@ func ChatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 		return nil, err
 	}
 
-	fmt.Println("REA", string(requestb))
+	// fmt.Println("REA", string(requestb))
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent?key=" + apikey
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {

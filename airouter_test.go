@@ -13,7 +13,7 @@ import (
 
 type RequestTestCase struct {
 	OpenAI *OpenAIChatRequest `json:"openai"`
-	Gemini json.RawMessage    `json:"gemini"`
+	Gemini *GeminiRequest     `json:"gemini"`
 }
 
 func TestRequestConversion(t *testing.T) {
@@ -38,7 +38,9 @@ func TestRequestConversion(t *testing.T) {
 			if err := json.Unmarshal([]byte(actualJSON), &actualMap); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
 			}
-			if err := json.Unmarshal(tc.Gemini, &expectedMap); err != nil {
+
+			gemb, _ := json.Marshal(tc.Gemini)
+			if err := json.Unmarshal(gemb, &expectedMap); err != nil {
 				t.Fatalf("Failed to unmarshal expected JSON: %v", err)
 			}
 
@@ -149,9 +151,6 @@ func TestChatCompletion(t *testing.T) {
 	openai_apikey := os.Getenv("OPENAI_APIKEY")
 	gemini_apikey := os.Getenv("GEMINI_APIKEY")
 	for name, tc := range testCases {
-		if name != "test_tool_call_finished_gemini"  {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
 			var output []byte

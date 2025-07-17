@@ -239,8 +239,8 @@
       ],
       "usage": {
         "prompt_tokens": 157,
-        "completion_tokens": 35,
-        "total_tokens": 313,
+        "completion_tokens": 332,
+        "total_tokens": 489,
         "prompt_tokens_details": {
           "cached_tokens": 0,
           "audio_tokens": 0

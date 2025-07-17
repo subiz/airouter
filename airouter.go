@@ -3,7 +3,6 @@ package airouter
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -212,7 +211,7 @@ func ChatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 		return nil, err
 	}
 
-	fmt.Println("REQ", string(request))
+	// fmt.Println("REQ", string(request))
 
 	defer resp.Body.Close()
 	buf := new(bytes.Buffer)

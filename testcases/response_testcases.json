@@ -137,6 +137,71 @@
       }
     }
   },
+  "cached_token": {
+    "gemini": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "Chào bạn, bạn vui lòng cho mình biết cụ thể bạn muốn so sánh mẫu xe Vinfast nào với mẫu xe BMW nào nhé."
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 7125,
+        "candidatesTokenCount": 27,
+        "totalTokenCount": 7320,
+        "cachedContentTokenCount": 6772,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 7125
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 6772
+          }
+        ],
+        "thoughtsTokenCount": 168
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "CM54aNm0NvOH-sAPh57kiAI"
+    },
+    "openai": {
+      "id": "CM54aNm0NvOH-sAPh57kiAI",
+      "object": "chat.completion",
+      "model": "gemini-2.5-flash",
+      "choices": [
+        {
+          "message": {
+            "role": "assistant",
+            "content": "Chào bạn, bạn vui lòng cho mình biết cụ thể bạn muốn so sánh mẫu xe Vinfast nào với mẫu xe BMW nào nhé.",
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 7125,
+        "completion_tokens": 195,
+        "total_tokens": 7320,
+        "prompt_tokens_details": {
+          "cached_tokens": 6772,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
   "error_1": {
     "gemini": {
       "error": {
