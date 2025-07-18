@@ -106,6 +106,17 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		}
 	}
 
+	if responseformat != nil {
+		params.ResponseFormat = &ResponseFormat{
+			Type: "json_schema",
+			JSONSchema: &RJSONSchema{
+				Name:   responseformat.GetName(),
+				Strict: responseformat.GetStrict(),
+				Schema: toOpenAISchema(responseformat.GetSchema()),
+			},
+		}
+	}
+
 	if len(tools) > 0 {
 		params.Tools = tools
 	}
