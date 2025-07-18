@@ -344,6 +344,7 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 
 	return &OpenAIChatResponse{
 		ID:      responseID,
+		Created: time.Now().Unix(),
 		Object:  "chat.completion",
 		Model:   res.ModelVersion,
 		Choices: []OpenAIChoice{choice},

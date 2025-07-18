@@ -36,7 +36,7 @@ type CompletionOutput struct {
 	FpvCostUSD        int64  `json:"fpv_cost_usd"`
 }
 
-var _apikey string
+var _apikey string // subiz api key
 
 func Init(apikey string) {
 	_apikey = apikey
@@ -123,32 +123,13 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 
 	var err error
 	functioncalled := false
-	requestbody, _ := json.Marshal(params)
-	md5sum := GetMD5Hash(string(requestbody))
-	cachepath := "./.cache/" + md5sum
-	cache, err := os.ReadFile(cachepath)
-	if err != nil {
-		if _, err := os.Stat("./.cache"); os.IsNotExist(err) {
-			os.MkdirAll("./.cache", os.ModePerm)
-		}
-		_, err := os.Stat(cachepath)
-		if err == nil || !os.IsNotExist(err) {
-			panic(err)
-		}
-	}
-	if len(cache) > 0 {
-		completion := CompletionOutput{}
-		json.Unmarshal(cache, &completion)
-		completion.FpvCostUSD = 0
-		return completion.Content, completion, nil
-	}
+	var requestbody []byte
+	completion := &OpenAIChatResponse{}
 
 	var totalCost int64
 	tokenUsages := []*Usage{}
-	completion := &OpenAIChatResponse{}
 
 	for range 5 { // max 5 loops
-		requestbody, _ = json.Marshal(params)
 		if stopAfterFunctionCall && functioncalled {
 			break
 		}
@@ -161,7 +142,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 
 		// send to subiz server
 		q := neturl.Values{}
-		if accid, _ := ctx.Value("account_id").(string); accid != "" {
+		if accid != "" {
 			q.Set("account_id", accid)
 		}
 		if id, _ := ctx.Value("conversation_id").(string); id != "" {
@@ -175,34 +156,56 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		}
 
 		url := "https://api.subiz.com.vn/4.1/ai/completions?" + q.Encode()
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestbody))
+		requestbody, _ = json.Marshal(params)
+
+		md5sum := GetMD5Hash(string(requestbody))
+		cachepath := "./.cache/cc-" + md5sum
+		cache, err := os.ReadFile(cachepath)
 		if err != nil {
-			return "", CompletionOutput{}, log.EServer(err)
+			if _, err := os.Stat("./.cache"); os.IsNotExist(err) {
+				os.MkdirAll("./.cache", os.ModePerm)
+			}
+			_, err := os.Stat(cachepath)
+			if err == nil || !os.IsNotExist(err) {
+				log.Err(accid, err, "CANNOT CACHE")
+			}
 		}
 
-		req.Header.Set("Authorization", "Bearer "+_apikey)
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := http.DefaultClient.Do(req)
-		log.Info(accid, log.Stack(), "SUBMITCHATGTPLLM INSTRUCTION", convoid, string(requestbody), time.Since(te))
+		cachehit := "HIT"
+		if len(cache) == 0 {
+			cachehit = "MISS"
+		}
+		log.Info(accid, log.Stack(), "SUBMITLLM", cachehit, convoid, string(requestbody), time.Since(te))
+		if len(cache) > 0 {
+			json.Unmarshal(cache, completion)
+		} else {
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestbody))
+			if err != nil {
+				return "", CompletionOutput{}, log.EServer(err)
+			}
 
-		if err != nil {
-			return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
+			req.Header.Set("Authorization", "Bearer "+_apikey)
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
+			}
+			defer resp.Body.Close()
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(resp.Body)
+			output := buf.Bytes()
+			if resp.StatusCode != 200 {
+				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+			}
+
+			pricestr := resp.Header.Get("X-Cost-USD")
+			price, _ := strconv.Atoi(pricestr)
+			totalCost += int64(price)
+
+			json.Unmarshal(output, completion)
+			os.WriteFile(cachepath, output, 0644)
 		}
 
-		defer resp.Body.Close()
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		output := buf.Bytes()
-
-		if resp.StatusCode != 200 {
-			return "", CompletionOutput{}, log.EProvider(err, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
-		}
-
-		pricestr := resp.Header.Get("X-Cost-USD")
-		price, _ := strconv.Atoi(pricestr)
-		totalCost += int64(price)
-
-		json.Unmarshal(output, completion)
 		if len(completion.Choices) == 0 {
 			break
 		}
@@ -225,6 +228,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			if fn := fnM[toolCall.Function.Name]; fn != nil {
 				functioncalled = true
 				callid = toolCall.ID
+
 				output, stop, err = fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
 			}
 
@@ -257,13 +261,11 @@ exit:
 		completionoutput.Refusal = completion.Choices[0].Message.Refusal
 		completionoutput.Content = completion.Choices[0].Message.GetContent()
 	}
-	b, _ := json.Marshal(&completionoutput)
-	err = os.WriteFile(cachepath, b, 0644)
 
 	if totalprice, _ := ctx.Value("total_cost").(*CompletionOutput); totalprice != nil {
 		totalprice.FpvCostUSD += totalCost
 	}
-	return completionoutput.Content, completionoutput, err
+	return completionoutput.Content, completionoutput, nil
 }
 
 func GetMD5Hash(text string) string {
