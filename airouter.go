@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"net/http"
 	"strings"
@@ -261,7 +260,7 @@ type OpenAIChatResponse struct {
 	ServiceTire string         `json:"service_tier,omitempty"`
 }
 
-func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) (*OpenAIChatResponse, error) {
+func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) (OpenAIChatResponse, error) {
 	var output []byte
 	var err error
 	if strings.HasPrefix(model, "gemini") {
@@ -270,10 +269,20 @@ func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) 
 		output, err = chatCompleteChatGPT(ctx, apikey, model, request)
 	}
 
-	response := &OpenAIChatResponse{}
-	err = json.Unmarshal(output, response)
+	if len(output) == 0 && err != nil {
+		return OpenAIChatResponse{
+			Error: &OpenAIError{Message: err.Error(), Type: "internal_error"},
+		}, err
+	}
+	response := OpenAIChatResponse{}
+	if err := json.Unmarshal(output, &response); err != nil {
+		return OpenAIChatResponse{Error: &OpenAIError{Message: "Invalid response JSON format", Type: "internal_error"}},
+			log.EProvider(nil, "model", "completion", log.M{"_payload": output})
+	}
 	return response, err
 }
+
+var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reached","type": "timeout"}}`)
 
 func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []byte) ([]byte, error) {
 	rq := &OpenAIChatRequest{}
@@ -291,15 +300,17 @@ func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 		return nil, err
 	}
 
-	fmt.Println("REQ", string(request))
-
 	defer resp.Body.Close()
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	output := buf.Bytes()
 
 	if resp.StatusCode != 200 {
-		return nil, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+		if strings.ToLower(strings.TrimSpace(string(output))) == strings.ToLower("Error: Timeout was reached") {
+			return chatgpttimeouterr, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+		}
+
+		return output, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 	}
 
 	return output, nil
@@ -307,6 +318,10 @@ func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 
 // usd fpv
 func CalculateCost(model string, usage *Usage) int64 {
+	if usage == nil {
+		return 0
+	}
+
 	inputtoken := usage.PromptTokens
 	var cachedtoken int64
 	if usage.PromptTokensDetails != nil {
