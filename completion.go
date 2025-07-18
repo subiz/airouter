@@ -121,7 +121,6 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		params.Tools = tools
 	}
 
-	var err error
 	functioncalled := false
 	var requestbody []byte
 	completion := &OpenAIChatResponse{}
