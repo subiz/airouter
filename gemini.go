@@ -72,25 +72,28 @@ type GeminiFunctionResponse struct {
 func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 	var geminiTools []*GeminiTool
 	for _, tool := range req.Tools {
-		properties := make(map[string]*header.JSONSchema)
-		for key, prop := range tool.Function.Parameters.Properties {
-			properties[key] = &header.JSONSchema{
-				Type:        prop.Type,
-				Description: prop.Description,
-			}
-		}
-
-		var decls []*GeminiFunctionDeclaration
-		decls = append(decls, &GeminiFunctionDeclaration{
+		decl := &GeminiFunctionDeclaration{
 			Name:        tool.Function.Name,
 			Description: tool.Function.Description,
-			Parameters: &header.JSONSchema{
+		}
+
+		if tool.Function.Parameters != nil {
+			properties := make(map[string]*header.JSONSchema)
+			for key, prop := range tool.Function.Parameters.Properties {
+				properties[key] = &header.JSONSchema{
+					Type:        prop.Type,
+					Description: prop.Description,
+				}
+			}
+
+			decl.Parameters = &header.JSONSchema{
 				Type:       "object",
 				Properties: properties,
 				Required:   tool.Function.Parameters.Required,
-			},
-		})
-		geminiTools = append(geminiTools, &GeminiTool{FunctionDeclarations: decls})
+			}
+		}
+
+		geminiTools = append(geminiTools, &GeminiTool{FunctionDeclarations: []*GeminiFunctionDeclaration{decl}})
 	}
 
 	geminiReq := GeminiRequest{

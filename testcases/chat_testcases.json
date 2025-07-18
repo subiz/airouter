@@ -588,5 +588,50 @@
       "service_tier": "default",
       "system_fingerprint": null
     }
+  },
+  "20": {
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Xin chao"
+        },
+        {
+          "role": "user",
+          "content": "Bạn ơi cho mình hỏi mình muốn in hóa đơn bán ra một loạt thi lam ntn"
+        }
+      ],
+      "model": "gemini-2.0-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_human_handoff",
+            "description": "Call this to hand over the conversation to human agent. Skip if already assigned to real human"
+          }
+        }
+      ]
+    },
+    "output": {
+      "object": "chat.completion",
+      "model": "gemini-2.0-flash",
+      "choices": [
+        {
+          "message": {
+            "role": "assistant",
+            "content": "Tôi xin lỗi, tôi không thể giúp bạn in hóa đơn. Tôi chỉ là một mô hình ngôn ngữ lớn."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 44,
+        "completion_tokens": 23,
+        "total_tokens": 67,
+        "prompt_tokens_details": { "cached_tokens": 0 }
+      }
+    }
   }
 }

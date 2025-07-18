@@ -490,5 +490,66 @@
       },
       "model": "models/gemini-2.0-flash"
     }
+  },
+  "10": {
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Xin chao"
+        },
+        {
+          "role": "user",
+          "content": "Bạn ơi cho mình hỏi mình muốn in hóa đơn bán ra một loạt thi lam ntn"
+        }
+      ],
+      "model": "gemini-2.0-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_human_handoff",
+            "description": "Call this to hand over the conversation to human agent. Skip if already assigned to real human"
+          }
+        }
+      ]
+    },
+    "gemini": {
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Xin chao"
+          }
+        ]
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Bạn ơi cho mình hỏi mình muốn in hóa đơn bán ra một loạt thi lam ntn"
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      },
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "system_human_handoff",
+              "description": "Call this to hand over the conversation to human agent. Skip if already assigned to real human"
+            }
+          ]
+        }
+      ],
+      "model": "models/gemini-2.0-flash"
+    }
   }
 }

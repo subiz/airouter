@@ -306,7 +306,7 @@ func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 	output := buf.Bytes()
 
 	if resp.StatusCode != 200 {
-		if strings.ToLower(strings.TrimSpace(string(output))) == strings.ToLower("Error: Timeout was reached") {
+		if strings.EqualFold(string(output), "Error: Timeout was reached") {
 			return chatgpttimeouterr, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 		}
 

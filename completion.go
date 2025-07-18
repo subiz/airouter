@@ -19,7 +19,7 @@ import (
 
 type AIFunction struct {
 	header.AIFunction
-	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool, error) // "", true, nil -> abandon completion, stop the flow immediately
+	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) // "", true, nil -> abandon completion, stop the flow immediately
 }
 
 type CompletionOutput struct {
@@ -57,25 +57,19 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			Function: Function{
 				Name:        fn.Name,
 				Description: fn.Description,
-				Parameters: &JSONSchema{
-					Type:                 fn.Parameters.GetType(),
-					AdditionalProperties: false,
-					Required:             fn.Parameters.GetRequired(),
-				},
 			},
 		}
-		if fn.Parameters == nil {
-			f.Function.Parameters = &JSONSchema{
-				Type:       "object",
-				Properties: map[string]*JSONSchema{},
-				Required:   []string{},
-			}
-		} else {
+		if fn.Parameters != nil {
 			properties := map[string]*JSONSchema{}
 			for k, v := range fn.Parameters.Properties {
 				properties[k] = toOpenAISchema(v)
 			}
-			f.Function.Parameters.Properties = properties
+			f.Function.Parameters = &JSONSchema{
+				Type:                 fn.Parameters.GetType(),
+				AdditionalProperties: false,
+				Required:             fn.Parameters.GetRequired(),
+				Properties:           properties,
+			}
 		}
 		tools = append(tools, f)
 	}
@@ -227,8 +221,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			if fn := fnM[toolCall.Function.Name]; fn != nil {
 				functioncalled = true
 				callid = toolCall.ID
-
-				output, stop, err = fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
+				output, stop = fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
 			}
 
 			// m := openai.ToolMessage(output, toolCall.ID)
