@@ -367,6 +367,8 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
 		totalprice.USD += int64(pricef * 1000)
 	}
+	cache, _ = json.Marshal(embeddingoutput)
+	os.WriteFile(cachepath, cache, 0644)
 	return embeddingoutput.Vector, embeddingoutput, nil
 }
 

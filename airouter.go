@@ -30,8 +30,6 @@ const Text_embedding_ada_002 = "text-embedding-ada-002"
 
 const Gemini_embedding_001 = "gemini-embedding-001"
 
-const USD_TO_VND = 25_575
-
 func ToModel(model string) string {
 	if model == "gpt-4o-mini" || strings.HasPrefix(model, "gpt-4o-mini-2") {
 		return Gpt_4o_mini
