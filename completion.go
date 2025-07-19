@@ -22,24 +22,36 @@ type AIFunction struct {
 	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) // "", true, nil -> abandon completion, stop the flow immediately
 }
 
+type EmbeddingOutput struct {
+	Text        string    `json:"text"`
+	Vector      []float32 `json:"vector"`
+	TotalTokens int64     `json:"total_tokens"`
+	Created     int64     `json:"created"`
+	DurationMs  int64     `json:"duration_ms"`
+	KfpvCostUSD int64     `json:"kfpv_cost_usd"`
+}
+
 type CompletionOutput struct {
 	Content           string `json:"content"`
 	Refusal           string `json:"refusal"`
 	Request           []byte `json:"request"`
-	Response          []byte `json:"response"`
 	InputTokens       int64  `json:"input_tokens"`
 	OutputTokens      int64  `json:"output_tokens"`
 	InputCachedTokens int64  `json:"input_cached_tokens"`
 	OuputCachedTokens int64  `json:"output_cached_tokens"`
 	Created           int64  `json:"created"`
 	DurationMs        int64  `json:"duration_ms"`
-	FpvCostUSD        int64  `json:"fpv_cost_usd"`
+	KfpvCostUSD       int64  `json:"kfpv_cost_usd"` // 1 usd -> 1000_000_000 kfpvusd
 }
 
 var _apikey string // subiz api key
 
 func Init(apikey string) {
 	_apikey = apikey
+}
+
+type TotalCost struct {
+	USD int64 `json:"usd"` // 1000000000
 }
 
 func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string, stopAfterFunctionCall bool) (string, CompletionOutput, error) {
@@ -119,7 +131,7 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 	var requestbody []byte
 	completion := &OpenAIChatResponse{}
 
-	var totalCost int64
+	var totalCost float64
 	tokenUsages := []*Usage{}
 
 	for range 5 { // max 5 loops
@@ -192,8 +204,8 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			}
 
 			pricestr := resp.Header.Get("X-Cost-USD")
-			price, _ := strconv.Atoi(pricestr)
-			totalCost += int64(price)
+			pricef, _ := strconv.ParseFloat(pricestr, 64)
+			totalCost += pricef
 
 			json.Unmarshal(output, completion)
 			os.WriteFile(cachepath, output, 0644)
@@ -238,10 +250,10 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 
 exit:
 	completionoutput := CompletionOutput{
-		Request:    requestbody,
-		DurationMs: time.Now().UnixMilli() - start.UnixMilli(),
-		Created:    start.UnixMilli(),
-		FpvCostUSD: totalCost,
+		Request:     requestbody,
+		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
+		Created:     start.UnixMilli(),
+		KfpvCostUSD: int64(totalCost * 1000),
 	}
 
 	for _, tokenUsage := range tokenUsages {
@@ -254,10 +266,104 @@ exit:
 		completionoutput.Content = completion.Choices[0].Message.GetContent()
 	}
 
-	if totalprice, _ := ctx.Value("total_cost").(*CompletionOutput); totalprice != nil {
-		totalprice.FpvCostUSD += totalCost
+	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
+		totalprice.USD += int64(totalCost * 1000)
 	}
 	return completionoutput.Content, completionoutput, nil
+}
+
+func GetEmbedding(ctx context.Context, model string, text string) ([]float32, EmbeddingOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	start := time.Now()
+	response := &OpenAIEmbeddingResponse{}
+	// Retrieve the value and assert it as a string
+	accid, _ := ctx.Value("account_id").(string)
+	convoid, _ := ctx.Value("conversation_id").(string)
+
+	te := time.Now()
+
+	// send to subiz server
+	q := neturl.Values{}
+	if accid != "" {
+		q.Set("account_id", accid)
+	}
+	if id, _ := ctx.Value("conversation_id").(string); id != "" {
+		q.Set("x-conversation-id", id)
+	}
+	if id, _ := ctx.Value("trace_id").(string); id != "" {
+		q.Set("x-trace-id", id)
+	}
+	if id, _ := ctx.Value("purpose").(string); id != "" {
+		q.Set("x-purpose", id)
+	}
+
+	q.Set("model", model)
+
+	text = strings.TrimSpace(text)
+	url := "https://api.subiz.com.vn/4.1/ai/embeddings?" + q.Encode()
+	md5sum := GetMD5Hash(text)
+	cachepath := "./.cache/eb-" + md5sum
+	cache, err := os.ReadFile(cachepath)
+	if err != nil {
+		if _, err := os.Stat("./.cache"); os.IsNotExist(err) {
+			os.MkdirAll("./.cache", os.ModePerm)
+		}
+		_, err := os.Stat(cachepath)
+		if err == nil || !os.IsNotExist(err) {
+			log.Err(accid, err, "CANNOT CACHE")
+		}
+	}
+
+	if len(cache) > 0 {
+		output := EmbeddingOutput{}
+		json.Unmarshal(cache, &output)
+		return output.Vector, output, nil
+	}
+
+	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(text)))
+	if err != nil {
+		return nil, EmbeddingOutput{}, log.EServer(err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+_apikey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
+	}
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	resoutput := buf.Bytes()
+	if resp.StatusCode != 200 {
+		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
+	}
+
+	json.Unmarshal(resoutput, response)
+
+	pricestr := resp.Header.Get("X-Cost-USD") // fpv
+	pricef, _ := strconv.ParseFloat(pricestr, 64)
+
+	embeddingoutput := EmbeddingOutput{
+		Text:        text,
+		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
+		Created:     start.UnixMilli(),
+		KfpvCostUSD: int64(pricef * 1000),
+	}
+
+	if len(response.Data) > 0 {
+		embeddingoutput.Vector = response.Data[0].Embedding
+	}
+
+	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
+		totalprice.USD += int64(pricef * 1000)
+	}
+	return embeddingoutput.Vector, embeddingoutput, nil
 }
 
 func GetMD5Hash(text string) string {

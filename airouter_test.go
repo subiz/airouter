@@ -148,8 +148,8 @@ func TestChatCompletion(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
-	openai_apikey := os.Getenv("OPENAI_APIKEY")
-	gemini_apikey := os.Getenv("GEMINI_APIKEY")
+	openai_apikey := os.Getenv("OPENAI_API_KEY")
+	gemini_apikey := os.Getenv("GEMINI_API_KEY")
 	for name, tc := range testCases {
 		if name != "20" {
 			continue
@@ -237,6 +237,69 @@ func TestCost(t *testing.T) {
 			output := CalculateCost(tc.Model, tc.Usage)
 			if output != tc.Cost {
 				t.Errorf("Testcase %s, expect %d, got %d", name, tc.Cost, output)
+			}
+		})
+	}
+}
+
+// ResponseTestCase is a struct for a single test case from the JSON file.
+type EmbeddingTestCase struct {
+	Output *OpenAIEmbeddingResponse `json:"output"`
+	Input  string                   `json:"input"`
+	Model  string                   `json:"model"`
+}
+
+func TestGetEmbedding(t *testing.T) {
+	// Read the test cases from the JSON file
+	file, err := os.ReadFile("./testcases/embedding_testcases.json")
+	if err != nil {
+		t.Fatalf("Failed to read test cases file: %v", err)
+	}
+
+	var testCases map[string]EmbeddingTestCase
+	if err := json.Unmarshal(file, &testCases); err != nil {
+		t.Fatalf("Failed to unmarshal test cases: %v", err)
+	}
+
+	openai_apikey := os.Getenv("OPENAI_API_KEY")
+	gemini_apikey := os.Getenv("GEMINI_API_KEY")
+	for name, tc := range testCases {
+		if name != "err" {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			var output OpenAIEmbeddingResponse
+			var err error
+			if strings.HasPrefix(tc.Model, "text") {
+				output, err = GetEmbeddingAPI(ctx, openai_apikey, tc.Model, tc.Input)
+			}
+
+			if strings.HasPrefix(tc.Model, "gemini") {
+				output, err = GetEmbeddingAPI(ctx, gemini_apikey, tc.Model, tc.Input)
+			}
+
+			if err != nil {
+				t.Fatalf("Failed to unmarshal test cases: %v", err)
+			}
+
+			outputb, _ := json.Marshal(output)
+			expectedJSON, err := json.Marshal(tc.Output)
+			if err != nil {
+				t.Fatalf("Failed to marshal expected response: %v", err)
+			}
+
+			var actualMap, expectedMap map[string]interface{}
+			if err := json.Unmarshal(outputb, &actualMap); err != nil {
+				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+			}
+			if err := json.Unmarshal(expectedJSON, &expectedMap); err != nil {
+				t.Fatalf("Failed to unmarshal expected JSON: %v", err)
+			}
+
+			// 5. Compare the maps.
+			if !cmp.Equal(expectedMap, actualMap) {
+				t.Errorf("Response JSON mismatch (-want +got):\n%s", cmp.Diff(expectedMap, actualMap))
 			}
 		})
 	}

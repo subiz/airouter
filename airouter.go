@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strings"
@@ -21,6 +23,12 @@ const Gemini_2_0_flash = "gemini-2.0-flash"
 const Gemini_2_5_pro = "gemini-2.5-pro"
 const Gemini_2_5_flash = "gemini-2.5-flash"
 const Gemini_1_5_flash = "gemini-1.5-flash"
+
+const Text_embedding_3_small = "text-embedding-3-small"
+const Text_embedding_3_large = "text-embedding-3-large"
+const Text_embedding_ada_002 = "text-embedding-ada-002"
+
+const Gemini_embedding_3_small = "gemini-embedding-001"
 
 const USD_TO_VND = 25_575
 
@@ -257,7 +265,7 @@ type OpenAIChatResponse struct {
 	Choices     []OpenAIChoice `json:"choices,omitempty"`
 	Usage       *Usage         `json:"usage,omitempty"`
 	Error       *OpenAIError   `json:"error,omitempty"`
-	ServiceTire string         `json:"service_tier,omitempty"`
+	ServiceTier string         `json:"service_tier,omitempty"`
 }
 
 func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) (OpenAIChatResponse, error) {
@@ -280,6 +288,13 @@ func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) 
 			log.EProvider(nil, "model", "completion", log.M{"_payload": output})
 	}
 	return response, err
+}
+
+func GetEmbeddingAPI(ctx context.Context, apikey, model, text string) (OpenAIEmbeddingResponse, error) {
+	if strings.HasPrefix(model, "gemini") {
+		return getGeminiEmbedding(ctx, apikey, model, text)
+	}
+	return getOpenAIEmbedding(ctx, apikey, model, text)
 }
 
 var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reached","type": "timeout"}}`)
@@ -316,10 +331,26 @@ func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []by
 	return output, nil
 }
 
-// usd fpv
+// return 1000 usd fpv
 func CalculateCost(model string, usage *Usage) int64 {
 	if usage == nil {
 		return 0
+	}
+
+	if model == "gemini-embedding-001" {
+		return int64(1000 * float64(usage.TotalTokens) * 0.15) // $0.15 per 1M token
+	}
+
+	if model == "text-embedding-3-small" {
+		return int64(1000 * float64(usage.TotalTokens) * 0.02) // $0.02 per 1M token
+	}
+
+	if model == "text-embedding-3-large" {
+		return int64(1000 * float64(usage.TotalTokens) * 0.13) // $0.13 per 1M token
+	}
+
+	if model == "text-embedding-ada-002" {
+		return int64(1000 * float64(usage.TotalTokens) * 0.1) // $0.10 per 1M token
 	}
 
 	inputtoken := usage.PromptTokens
@@ -329,7 +360,62 @@ func CalculateCost(model string, usage *Usage) int64 {
 		cachedtoken = usage.PromptTokensDetails.CachedTokens
 	}
 	outputtoken := usage.CompletionTokens
-	return int64(math.Ceil(float64(inputtoken)*llmmodelinputprice[ToModel(model)] +
+	return int64(math.Ceil(1000 * (float64(inputtoken)*llmmodelinputprice[ToModel(model)] +
 		float64(cachedtoken)*llmmodelcachedprice[ToModel(model)] +
-		float64(outputtoken)*llmmodeloutputprice[ToModel(model)]))
+		float64(outputtoken)*llmmodeloutputprice[ToModel(model)])))
+}
+
+type OpenAIEmbeddingRequest struct {
+	Input string `json:"input"`
+	Model string `json:"model"`
+}
+
+type OpenAIEmbeddingData struct {
+	Object    string    `json:"object"`
+	Embedding []float32 `json:"embedding"`
+	Index     int       `json:"index"`
+}
+
+type OpenAIEmbeddingResponse struct {
+	Object string                `json:"object"`
+	Data   []OpenAIEmbeddingData `json:"data"`
+	Model  string                `json:"model"`
+	Usage  Usage                 `json:"usage"`
+	Error  *OpenAIError          `json:"error,omitempty"`
+}
+
+// model text-embedding-3-small
+func getOpenAIEmbedding(ctx context.Context, apiKey, model, text string) (OpenAIEmbeddingResponse, error) {
+	url := "https://api.openai.com/v1/embeddings"
+	reqBody := OpenAIEmbeddingRequest{Input: text, Model: model}
+	out := OpenAIEmbeddingResponse{}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error marshalling request body: %s", err.Error())}
+		return out, fmt.Errorf("error marshalling request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error creating request: %s", err.Error())}
+		return out, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error sending request: %s", err.Error())}
+		return out, log.EProvider(err, "openai", "embedding", log.M{"status": resp.StatusCode, "model": model})
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	err = json.Unmarshal(bodyBytes, &out)
+	if resp.StatusCode != http.StatusOK {
+		return out, log.EProvider(err, "openai", "embedding", log.M{"model": model, "status": resp.StatusCode, "_payload": bodyBytes})
+	}
+	return out, err
 }

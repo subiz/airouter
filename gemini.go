@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/subiz/header"
 	"github.com/subiz/log"
@@ -402,4 +404,93 @@ func strsToParts(strs []string) []*GeminiPart {
 		}
 	}
 	return out
+}
+
+// EmbeddingContent represents the content for an embedding request.
+type EmbeddingContent struct {
+	Parts []EmbeddingPart `json:"parts"`
+}
+
+// EmbeddingPart represents a part of the content for an embedding request.
+type EmbeddingPart struct {
+	Text string `json:"text"`
+}
+
+// EmbeddingRequest represents the request to the embedding model.
+type EmbeddingRequest struct {
+	Model   string           `json:"model"`
+	Content EmbeddingContent `json:"content"`
+}
+
+// GeminiEmbeddingResponse represents the response from the embedding model.
+type GeminiEmbeddingResponse struct {
+	Embedding *Embedding `json:"embedding"`
+}
+
+// Embedding represents the embedding values.
+type Embedding struct {
+	Values []float32 `json:"values"`
+}
+
+// GetEmbedding takes a text and returns its embedding.
+// It uses the 'embedding-001' model.
+func getGeminiEmbedding(ctx context.Context, apiKey, model, text string) (OpenAIEmbeddingResponse, error) {
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=%s", apiKey)
+	var out OpenAIEmbeddingResponse
+	reqBody := EmbeddingRequest{
+		Model: model, // "models/embedding-001",
+		Content: EmbeddingContent{
+			Parts: []EmbeddingPart{{Text: text}},
+		},
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error marshalling request body: %s", err.Error())}
+		return out, fmt.Errorf("error marshalling request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error creating request: %s", err.Error())}
+		return out, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error making request: %s", err.Error())}
+		return out, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error making request: %d", resp.StatusCode)}
+		return out, fmt.Errorf("API request failed with status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var embeddingResp GeminiEmbeddingResponse
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if err := json.Unmarshal(bodyBytes, &embeddingResp); err != nil {
+		out.Error = &OpenAIError{Message: fmt.Sprintf("error decoding response body: %s", err.Error())}
+		return out, fmt.Errorf("error decoding response body: %w", err)
+	}
+
+	out.Object = "list"
+	out.Model = model
+	out.Data = []OpenAIEmbeddingData{{Object: "embedding", Index: 0}}
+	out.Usage = Usage{
+		PromptTokens: int64(1 + utf8.RuneCountInString(text)/4), // estimate number of tokens
+		TotalTokens:  int64(1 + utf8.RuneCountInString(text)/4), // estimate number of tokens
+	}
+
+	var values []float32
+	if embeddingResp.Embedding != nil {
+		values = embeddingResp.Embedding.Values
+	}
+
+	out.Data[0].Embedding = values
+	return out, nil
 }

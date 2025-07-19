@@ -6,7 +6,7 @@
   },
   "1": {
     "model": "gpt-4o-mini",
-    "cost": 5,
+    "cost": 4200,
     "usage": {
       "prompt_tokens": 24,
       "completion_tokens": 1,
@@ -19,7 +19,7 @@
   },
   "2": {
     "model": "gpt-4o-mini",
-    "cost": 4,
+    "cost": 3150,
     "usage": {
       "prompt_tokens": 13,
       "completion_tokens": 2,
@@ -32,7 +32,7 @@
   },
   "3": {
     "model": "gpt-4o-mini",
-    "cost": 47,
+    "cost": 46200,
     "usage": {
       "prompt_tokens": 148,
       "completion_tokens": 40,
@@ -51,7 +51,7 @@
   },
   "4": {
     "model": "gpt",
-    "cost": 223,
+    "cost": 222750,
     "usage": {
       "prompt_tokens": 157,
       "completion_tokens": 332,
@@ -64,7 +64,7 @@
   },
   "5": {
     "model": "gemini",
-    "cost": 37,
+    "cost": 36600,
     "usage": {
       "prompt_tokens": 186,
       "completion_tokens": 45,
@@ -83,7 +83,7 @@
   },
   "6": {
     "model": "gpt-4o-mini",
-    "cost": 24,
+    "cost": 23400,
     "usage": {
       "prompt_tokens": 140,
       "completion_tokens": 19,
@@ -92,6 +92,46 @@
         "cached_tokens": 120,
         "audio_tokens": 0
       }
+    }
+  },
+  "7": {
+    "model": "text-embedding-3-small",
+    "cost": 20000,
+    "usage": {
+      "prompt_tokens": 1000,
+      "total_tokens": 1000
+    }
+  },
+  "8": {
+    "model": "embedding-001",
+    "cost": 150000,
+    "usage": {
+      "prompt_tokens": 1000,
+      "total_tokens": 1000
+    }
+  },
+  "9": {
+    "model": "text-embedding-3-large",
+    "cost": 130000,
+    "usage": {
+      "prompt_tokens": 1000,
+      "total_tokens": 1000
+    }
+  },
+  "10": {
+    "model": "text-embedding-ada-002",
+    "cost": 100000,
+    "usage": {
+      "prompt_tokens": 1000,
+      "total_tokens": 1000
+    }
+  },
+  "11": {
+    "model": "text-embedding-ada-002",
+    "cost": 100,
+    "usage": {
+      "prompt_tokens": 1,
+      "total_tokens": 1
     }
   }
 }
