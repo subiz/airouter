@@ -1,4 +1,9 @@
 {
+  "0": {
+    "input": "",
+    "model": "text-embedding-3-small",
+    "output": {}
+  },
   "1": {
     "input": "xin chao",
     "model": "text-embedding-3-small",

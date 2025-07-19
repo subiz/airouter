@@ -28,7 +28,7 @@ const Text_embedding_3_small = "text-embedding-3-small"
 const Text_embedding_3_large = "text-embedding-3-large"
 const Text_embedding_ada_002 = "text-embedding-ada-002"
 
-const Gemini_embedding_3_small = "gemini-embedding-001"
+const Gemini_embedding_001 = "gemini-embedding-001"
 
 const USD_TO_VND = 25_575
 
@@ -254,6 +254,7 @@ type OpenAIError struct {
 	Message string `json:"message"`
 	Type    string `json:"type"`
 	Param   string `json:"param"`
+	Code    string `json:"code,omitempty"`
 }
 
 // OpenAIChatResponse mimics the structure of an OpenAI Chat Completion response.
@@ -291,10 +292,24 @@ func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) 
 }
 
 func GetEmbeddingAPI(ctx context.Context, apikey, model, text string) (OpenAIEmbeddingResponse, error) {
-	if strings.HasPrefix(model, "gemini") {
+	text = strings.TrimSpace(text)
+	if len(text) == 0 {
+		return OpenAIEmbeddingResponse{}, nil
+	}
+	if model == "gemini-embedding-001" {
 		return getGeminiEmbedding(ctx, apikey, model, text)
 	}
-	return getOpenAIEmbedding(ctx, apikey, model, text)
+
+	if model == Text_embedding_3_small || model == Text_embedding_3_large || model == Text_embedding_ada_002 {
+		return getOpenAIEmbedding(ctx, apikey, model, text)
+	}
+	return OpenAIEmbeddingResponse{
+		Error: &OpenAIError{
+			Message: "The model `" + model + "` does not exist or you do not have access to it.",
+			Type:    "invalid_request_error",
+			Code:    "model_not_found",
+		},
+	}, fmt.Errorf("model not found: %s", model)
 }
 
 var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reached","type": "timeout"}}`)
@@ -380,7 +395,7 @@ type OpenAIEmbeddingResponse struct {
 	Object string                `json:"object"`
 	Data   []OpenAIEmbeddingData `json:"data"`
 	Model  string                `json:"model"`
-	Usage  Usage                 `json:"usage"`
+	Usage  *Usage                `json:"usage"`
 	Error  *OpenAIError          `json:"error,omitempty"`
 }
 

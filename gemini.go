@@ -481,7 +481,7 @@ func getGeminiEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 	out.Object = "list"
 	out.Model = model
 	out.Data = []OpenAIEmbeddingData{{Object: "embedding", Index: 0}}
-	out.Usage = Usage{
+	out.Usage = &Usage{
 		PromptTokens: int64(1 + utf8.RuneCountInString(text)/4), // estimate number of tokens
 		TotalTokens:  int64(1 + utf8.RuneCountInString(text)/4), // estimate number of tokens
 	}

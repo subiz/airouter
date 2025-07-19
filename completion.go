@@ -273,6 +273,11 @@ exit:
 }
 
 func GetEmbedding(ctx context.Context, model string, text string) ([]float32, EmbeddingOutput, error) {
+	text = strings.TrimSpace(text)
+	if len(text) == 0 {
+		return nil, EmbeddingOutput{}, nil
+	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -302,7 +307,6 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 
 	q.Set("model", model)
 
-	text = strings.TrimSpace(text)
 	url := "https://api.subiz.com.vn/4.1/ai/embeddings?" + q.Encode()
 	md5sum := GetMD5Hash(text)
 	cachepath := "./.cache/eb-" + md5sum

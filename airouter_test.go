@@ -264,9 +264,6 @@ func TestGetEmbedding(t *testing.T) {
 	openai_apikey := os.Getenv("OPENAI_API_KEY")
 	gemini_apikey := os.Getenv("GEMINI_API_KEY")
 	for name, tc := range testCases {
-		if name != "err" {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
 			var output OpenAIEmbeddingResponse
