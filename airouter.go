@@ -78,6 +78,7 @@ func ToModel(model string) string {
 	return Gpt_4o_mini
 }
 
+// ToGeminiModel converts a model name to its equivalent Gemini model.
 func ToGeminiModel(model string) string {
 	model = ToModel(model)
 
@@ -101,6 +102,54 @@ func ToGeminiModel(model string) string {
 		return Gemini_2_5_flash
 	}
 	return model
+}
+
+// ToOpenAIModel converts a model name to its equivalent OpenAI model.
+func ToOpenAIModel(model string) string {
+	model = ToModel(model)
+
+	if strings.HasPrefix(model, "gpt") {
+		return model
+	}
+
+	if model == Gemini_2_0_flash {
+		return Gpt_4o_mini
+	}
+
+	if model == Gemini_1_5_flash {
+		return Gpt_4_1_nano
+	}
+
+	if model == Gemini_2_5_pro {
+		return Gpt_4o
+	}
+
+	if model == Gemini_2_5_flash {
+		return Gpt_4_1_mini
+	}
+
+	// fallback for gemini
+	if strings.HasPrefix(model, "gemini") {
+		return Gpt_4o_mini
+	}
+
+	return model
+}
+
+// GetFallbackChatModel returns a fallback model for a given model.
+// If the model is a GPT model, it returns the equivalent Gemini model.
+// If the model is a Gemini model, it returns the equivalent OpenAI model.
+// Otherwise, it returns a default Gemini model.
+func GetFallbackChatModel(model string) string {
+	if strings.HasPrefix(model, "gpt") {
+		return ToGeminiModel(model)
+	}
+
+	if strings.HasPrefix(model, "gemini") {
+		return ToOpenAIModel(model)
+	}
+
+	return Gemini_2_0_flash
 }
 
 // per 1M tokens
