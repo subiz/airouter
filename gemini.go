@@ -273,70 +273,70 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 			},
 		}, nil
 	}
-	if res == nil || len(res.Candidates) == 0 {
+	if res == nil {
 		return nil, fmt.Errorf("empty response from Gemini")
 	}
 	responseID := res.ResponseId
 	choice := OpenAIChoice{Index: 0}
-	candidate := res.Candidates[0]
-
-	if candidate.FinishReason != "STOP" {
-		finishReasonText := fmt.Sprintf("Response stopped due to: %s", candidate.FinishReason)
-		choice.Message = OpenAIChatMessage{
-			Role:    "assistant",
-			Content: &finishReasonText,
-		}
-		choice.FinishReason = "stop"
-	} else {
-		if candidate.Content == nil || len(candidate.Content.Parts) == 0 {
-			emptyContent := ""
+	if len(res.Candidates) > 0 {
+		candidate := res.Candidates[0]
+		if candidate.FinishReason != "STOP" {
+			finishReasonText := fmt.Sprintf("Response stopped due to: %s", candidate.FinishReason)
 			choice.Message = OpenAIChatMessage{
 				Role:    "assistant",
-				Content: &emptyContent,
+				Content: &finishReasonText,
 			}
 			choice.FinishReason = "stop"
 		} else {
-			var responseText string
-			var toolCalls []ToolCall
-
-			for i, part := range candidate.Content.Parts {
-				if part.Text != nil {
-					responseText += *part.Text
-				} else if part.FunctionCall != nil {
-					argsJSON, err := json.Marshal(part.FunctionCall.Args)
-					if err != nil {
-						return nil, fmt.Errorf("failed to marshal function call arguments: %w", err)
-					}
-					toolCalls = append(toolCalls, ToolCall{
-						ID:   fmt.Sprintf("call_%s_%d", responseID, i),
-						Type: "function",
-						Function: ToolFunction{
-							Name:      part.FunctionCall.Name,
-							Arguments: string(argsJSON),
-						},
-					})
-				}
-			}
-
-			if len(toolCalls) > 0 {
-				choice.Message = OpenAIChatMessage{
-					Role:      "assistant",
-					Content:   nil,
-					ToolCalls: toolCalls,
-				}
-				choice.FinishReason = "tool_calls"
-			} else {
+			if candidate.Content == nil || len(candidate.Content.Parts) == 0 {
+				emptyContent := ""
 				choice.Message = OpenAIChatMessage{
 					Role:    "assistant",
-					Content: &responseText,
+					Content: &emptyContent,
 				}
 				choice.FinishReason = "stop"
+			} else {
+				var responseText string
+				var toolCalls []ToolCall
+
+				for i, part := range candidate.Content.Parts {
+					if part.Text != nil {
+						responseText += *part.Text
+					} else if part.FunctionCall != nil {
+						argsJSON, err := json.Marshal(part.FunctionCall.Args)
+						if err != nil {
+							return nil, fmt.Errorf("failed to marshal function call arguments: %w", err)
+						}
+						toolCalls = append(toolCalls, ToolCall{
+							ID:   fmt.Sprintf("call_%s_%d", responseID, i),
+							Type: "function",
+							Function: ToolFunction{
+								Name:      part.FunctionCall.Name,
+								Arguments: string(argsJSON),
+							},
+						})
+					}
+				}
+
+				if len(toolCalls) > 0 {
+					choice.Message = OpenAIChatMessage{
+						Role:      "assistant",
+						Content:   nil,
+						ToolCalls: toolCalls,
+					}
+					choice.FinishReason = "tool_calls"
+				} else {
+					choice.Message = OpenAIChatMessage{
+						Role:    "assistant",
+						Content: &responseText,
+					}
+					choice.FinishReason = "stop"
+				}
 			}
 		}
 	}
 
 	var usage *Usage
-
 	if res.UsageMetadata != nil {
 		usage = &Usage{
 			PromptTokens:     int64(res.UsageMetadata.PromptTokenCount),
