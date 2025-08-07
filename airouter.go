@@ -16,6 +16,9 @@ import (
 const Gpt_4o_mini = "gpt-4o-mini"
 const Gpt_4o = "gpt-4o"
 const Gpt_4_1_mini = "gpt-4.1-mini"
+const Gpt_5_mini = "gpt-5-mini"
+const Gpt_5_nano = "gpt-5-nano"
+const Gpt_5 = "gpt-5"
 const Gpt_4_1_nano = "gpt-4.1-nano"
 const Gpt_4_1 = "gpt-4.1"
 
@@ -50,6 +53,18 @@ func ToModel(model string) string {
 		return Gpt_4_1_mini
 	}
 
+	if model == "gpt-5" || strings.HasPrefix(model, "gpt-5-2") {
+		return Gpt_5
+	}
+
+	if model == "gpt-5-mini" || strings.HasPrefix(model, "gpt-5-mini-2") {
+		return Gpt_5_mini
+	}
+
+	if model == "gpt-5-nano" || strings.HasPrefix(model, "gpt-5-nano-2") {
+		return Gpt_5_nano
+	}
+
 	// fallback for gpt
 	if strings.HasPrefix(model, "gpt") {
 		return Gpt_4o_mini
@@ -81,15 +96,11 @@ func ToModel(model string) string {
 func ToGeminiModel(model string) string {
 	model = ToModel(model)
 
-	if model == Gpt_4o_mini || model == Gpt_4_1_mini {
+	if model == Gpt_4o_mini || model == Gpt_4_1_nano || model == Gpt_5_nano || model == Gpt_5_mini {
 		return Gemini_2_0_flash
 	}
 
-	if model == Gpt_4_1_nano {
-		return Gemini_2_0_flash
-	}
-
-	if model == Gpt_4o || model == Gpt_4_1 {
+	if model == Gpt_4o || model == Gpt_4_1 || model == Gpt_5 {
 		return Gemini_2_5_pro
 	}
 
@@ -154,6 +165,9 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-4.1-nano": 0.1,
 	"gpt-4o-mini":  0.15,
 	"gpt-4o":       2.5,
+	"gpt-5":        1.25,
+	"gpt-5-mini":   0.25,
+	"gpt-5-nano":   0.05,
 
 	"gemini-2.0-flash": 0.1,
 	"gemini-2.5-flash": 0.30,
@@ -167,6 +181,9 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-4.1-nano": 0.4,
 	"gpt-4o":       10,
 	"gpt-4o-mini":  0.6,
+	"gpt-5":        10,
+	"gpt-5-mini":   2,
+	"gpt-5-nano":   0.4,
 
 	"gemini-2.0-flash": 0.4,
 	"gemini-2.5-flash": 2.5,
@@ -180,8 +197,11 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-4.1-nano": 0.025,
 	"gpt-4o":       1.25,
 	"gpt-4o-mini":  0.075,
+	"gpt-5":        0.125,
+	"gpt-5-mini":   0.025,
+	"gpt-5-nano":   0.005,
 
-	"gemini-2.0-flash": 0.1,  // no caching
+	"gemini-2.0-flash": 0.1, // no caching
 	"gemini-2.5-flash": 0.225,
 	"gemini-2.5-pro":   11.25,
 }
