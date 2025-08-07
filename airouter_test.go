@@ -137,7 +137,6 @@ type ChatTestCase struct {
 }
 
 func TestChatCompletion(t *testing.T) {
-	// Read the test cases from the JSON file
 	file, err := os.ReadFile("./testcases/chat_testcases.json")
 	if err != nil {
 		t.Fatalf("Failed to read test cases file: %v", err)
@@ -151,7 +150,7 @@ func TestChatCompletion(t *testing.T) {
 	openai_apikey := os.Getenv("OPENAI_API_KEY")
 	gemini_apikey := os.Getenv("GEMINI_API_KEY")
 	for name, tc := range testCases {
-		if name != "20" {
+		if name != "21" {
 			continue
 		}
 		t.Run(name, func(t *testing.T) {

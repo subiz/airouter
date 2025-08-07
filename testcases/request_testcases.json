@@ -551,5 +551,121 @@
       ],
       "model": "models/gemini-2.0-flash"
     }
+  },
+  "11": {
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are an information extractor agent"
+        },
+        { "role": "system", "content": "User sent message on Website" },
+        { "role": "assistant", "content": "OK" }
+      ],
+      "model": "gemini-2.5-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_collect_user_information",
+            "description": "Store collected user information",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "explain": {
+                  "type": "string",
+                  "description": "Quote the message that user mention the information",
+                  "additionalProperties": false
+                },
+                "key": {
+                  "type": "string",
+                  "description": "Key of the information, empty if not found",
+                  "additionalProperties": false
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the information you collected",
+                  "additionalProperties": false
+                },
+                "user_mention": {
+                  "type": "boolean",
+                  "description": "The information is provided by the user",
+                  "additionalProperties": false
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value of the information you extracted, only use if you can confirm correctly that the information belong to the user",
+                  "additionalProperties": false
+                }
+              },
+              "required": ["key", "explain", "user_mention", "value", "name"],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash",
+      "systemInstruction": {
+        "parts": [
+          { "text": "You are an information extractor agent" },
+          { "text": "User sent message on Website" }
+        ]
+      },
+      "contents": [
+        {
+          "parts": [{ "text": "OK" }],
+          "role": "model"
+        },
+        {
+          "parts": [{ "text": "" }],
+          "role": "user"
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "system_collect_user_information",
+              "description": "Store collected user information",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "explain": {
+                    "type": "string",
+                    "description": "Quote the message that user mention the information"
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "Key of the information, empty if not found"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the information you collected"
+                  },
+                  "user_mention": {
+                    "type": "boolean",
+                    "description": "The information is provided by the user"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Value of the information you extracted, only use if you can confirm correctly that the information belong to the user"
+                  }
+                },
+                "required": ["key", "explain", "user_mention", "value", "name"]
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      }
+    }
   }
 }

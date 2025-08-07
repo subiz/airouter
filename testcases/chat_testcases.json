@@ -633,5 +633,99 @@
         "prompt_tokens_details": { "cached_tokens": 0 }
       }
     }
+  },
+  "21": {
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are an information extractor agent. Your role is extract information provided by the user from the conversation history.\nYou are interested in collecting these following informations:\n1. Email (Key: emails): Email address of the user.\n2. Phone (key: phones): Phone number of the user.\n2. Showroom (Key: showroom): Bạn là AI hỗ trợ thu thập tên Showroom của Thaco thông qua tên kênh khách liên hệ. . **Trường hợp đặc biệt**: . Khách nhắn tin đến kênh không có địa điểm như 'thacoauto.vn' -> lưu giá trị Showroom là 'Thaco Auto' . . Ví dụ 1: khách nhắn đến kênh website peugeottrankhatchan.com.vn, có địa điểm là 'trankhatchan' -> lưu giá trị Showroom là 'Trần Khát Chân' . Ví dụ 2: khách nhắn đến kênh Fanpage THACO AUTO Hải Phòng, có địa điểm là 'Hải Phòng' -> lưu giá trị Showroom là 'Hải Phòng'. Ví dụ 3: khách nhắn đến kênh Fanpage THACO AUTO, không có địa điểm -> lưu giá trị Showroom là 'Thaco Auto'\n"
+        },
+        {
+          "role": "system",
+          "content": "\nUser sent message on Website "
+        },
+        {
+          "role": "assistant",
+          "content": "CONVERSATION HISTORY\nuser: I commented to a post in Fanpage Mazda Hải Dương - Chí Linh\nassistant: 🚗 MAZDA2 CHỈ TỪ 399TR (*) - LỰA CHỌN KHÔNG THỂ BỎ LỠ TRONG DỊP HÈ NÀY. ===. 🔥 Nhỏ gọn không có nghĩa là thiếu chất. Mazda2 – xế yêu cho người thích công nghệ, ghét lãng phí. 🔥. . 💸 Sở hữu xe ngay chỉ từ 82TR (*) . 🎉 Bảo hành chính hãng 5 năm/150.000km. 🎉 Sẵn xe đủ màu – Giao ngay tại showroom. 🎉 Và vô vàn phần quà hấp dẫn từ Mazda Chí Linh. . 🧠 CÔNG NGHỆ CHẠM MẶT – ĐẲNG CẤP GỌI TÊN MAZDA2. 🔹 Mazda Connect – giao diện thông minh, kết nối Apple CarPlay/Android Auto mượt như crush nhắn tin lại. 🔹 Lái cực êm, vào cua mượt, tiết kiệm nhiên liệu đến bất ngờ. 🔹 Màn hình cảm ứng sắc nét, phản hồi nhạy – vừa đi vừa chill vẫn dễ thao tác. 🔹 Gọn gàng nhưng tiện nghi – chuẩn gu đô thị, dễ đỗ, dễ đi, không lo kẹt xe. . 📩 NHẬN BÁO GIÁ VÀ ƯU ĐÃI NGAY HÔM NAY!!!. . #Mazda2 #MazdaChiLinh #MazdaVietnam. ------------------. MAZDA CHÍ LINH. ▪️ Kinh doanh: 0938 904 393. ▪️ Dịch vụ: 0938 908 131. ▪️ Địa điểm: Quốc lộ 18, Khu Bình Giang, P. Chí Linh, TP Hải Phòng. ▪️ Website: https://mazdachilinh.com.vn/\nuser: Con này không có màn hình,cam lùi à"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_collect_user_information",
+            "description": "Store collected user information",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "explain": {
+                  "type": "string",
+                  "description": "Quote the message that user mention the information",
+                  "additionalProperties": false
+                },
+                "key": {
+                  "type": "string",
+                  "description": "Key of the information, empty if not found",
+                  "additionalProperties": false
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the information you collected",
+                  "additionalProperties": false
+                },
+                "user_mention": {
+                  "type": "boolean",
+                  "description": "The information is provided by the user",
+                  "additionalProperties": false
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value of the information you extracted, only use if you can confirm correctly that the information belong to the user",
+                  "additionalProperties": false
+                }
+              },
+              "required": ["key", "explain", "user_mention", "value", "name"],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    "output": {
+      "id": "CjeUaMvOB4Hjz7IP69nD4QM",
+      "created": 1754543882,
+      "object": "chat.completion",
+      "model": "gemini-2.5-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_CjeUaMvOB4Hjz7IP69nD4QM_0",
+                "type": "function",
+                "function": {
+                  "name": "system_collect_user_information",
+                  "arguments": "{\"explain\":\"User commented to a post in Fanpage Mazda Hải Dương - Chí Linh\",\"key\":\"showroom\",\"name\":\"Showroom\",\"user_mention\":true,\"value\":\"Hải Dương - Chí Linh\"}"
+                }
+              }
+            ]
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 827,
+        "completion_tokens": 105,
+        "total_tokens": 932,
+        "prompt_tokens_details": { "cached_tokens": 0 }
+      }
+    }
   }
 }

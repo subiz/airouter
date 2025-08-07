@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -195,6 +194,21 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 	}
 
 	if len(contents) > 0 {
+		// make sure the last content must be user message
+		// or gemini will emit
+		// {
+		//   "error": {
+		//     "code": 400,
+		//     "message": "Please ensure that single turn requests end with a user role or the role field is empty.",
+		//     "status": "INVALID_ARGUMENT"
+		//   }
+		// }
+
+		lastcontent := contents[len(contents)-1]
+		if lastcontent.Role != "user" {
+			contents = append(contents, &GeminiContent{Parts: strsToParts([]string{""}), Role: "user"})
+		}
+
 		geminiReq.Contents = contents
 	}
 
@@ -337,6 +351,7 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 	}
 
 	var usage *Usage
+
 	if res.UsageMetadata != nil {
 		usage = &Usage{
 			PromptTokens:     int64(res.UsageMetadata.PromptTokenCount),
@@ -368,13 +383,13 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 		return nil, err
 	}
 
-	// fmt.Println("REA", string(requestb))
-	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent?key=" + apikey
+	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
 		return nil, log.EServer(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-goog-api-key", apikey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -384,7 +399,6 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	output := buf.Bytes()
-
 	gemres := &GeminiAPIResponse{}
 	json.Unmarshal(output, gemres)
 
@@ -398,10 +412,7 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 func strsToParts(strs []string) []*GeminiPart {
 	out := []*GeminiPart{}
 	for _, str := range strs {
-		str = strings.TrimSpace(str)
-		if str != "" {
-			out = append(out, &GeminiPart{Text: &str})
-		}
+		out = append(out, &GeminiPart{Text: &str})
 	}
 	return out
 }
