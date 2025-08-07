@@ -667,5 +667,132 @@
         "topP": 1
       }
     }
+  },
+  "12": {
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": null,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "answer_plan",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "array",
+                "description": "action should be taken to answer the user query",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "description": "name of the action. Eg: 'greet', 'say-thanks'",
+                      "additionalProperties": false
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "additionalProperties": false
+                          },
+                          "value": {
+                            "type": "string",
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["name", "value"],
+                        "additionalProperties": false
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["action", "parameters"],
+                  "additionalProperties": false
+                },
+                "additionalProperties": false
+              },
+              "strategy": {
+                "type": "string",
+                "description": "strategy",
+                "additionalProperties": false
+              }
+            },
+            "required": ["strategy", "steps"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "Hi"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1,
+        "responseMimeType": "application/json",
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "steps": {
+              "type": "array",
+              "description": "action should be taken to answer the user query",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "name of the action. Eg: 'greet', 'say-thanks'"
+                  },
+                  "parameters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "value"]
+                    }
+                  }
+                },
+                "required": ["action", "parameters"]
+              }
+            },
+            "strategy": {
+              "type": "string",
+              "description": "strategy"
+            }
+          },
+          "required": ["strategy", "steps"]
+        }
+      }
+    }
   }
 }

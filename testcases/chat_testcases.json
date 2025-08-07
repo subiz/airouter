@@ -727,5 +727,98 @@
         "prompt_tokens_details": { "cached_tokens": 0 }
       }
     }
+  },
+  "22": {
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": null,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "answer_plan",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "array",
+                "description": "action should be taken to answer the user query",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "description": "name of the action. Eg: 'greet', 'say-thanks'",
+                      "additionalProperties": false
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "additionalProperties": false
+                          },
+                          "value": {
+                            "type": "string",
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["name", "value"],
+                        "additionalProperties": false
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["action", "parameters"],
+                  "additionalProperties": false
+                },
+                "additionalProperties": false
+              },
+              "strategy": {
+                "type": "string",
+                "description": "strategy",
+                "additionalProperties": false
+              }
+            },
+            "required": ["strategy", "steps"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "output": {
+      "id": "VFmUaI2nNJfUz7IPope--QM",
+      "created": 1754552660,
+      "object": "chat.completion",
+      "model": "gemini-2.5-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"steps\": [{\"action\": \"greet\", \"parameters\": []}], \"strategy\": \"respond to greeting\"}"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2,
+        "completion_tokens": 62,
+        "total_tokens": 64,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    }
   }
 }

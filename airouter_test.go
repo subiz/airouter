@@ -2,6 +2,7 @@ package airouter
 
 import (
 	"context"
+	"fmt"
 	"encoding/json"
 	"os"
 	"strings"
@@ -150,7 +151,7 @@ func TestChatCompletion(t *testing.T) {
 	openai_apikey := os.Getenv("OPENAI_API_KEY")
 	gemini_apikey := os.Getenv("GEMINI_API_KEY")
 	for name, tc := range testCases {
-		if name != "21" {
+		if name != "22" {
 			continue
 		}
 		t.Run(name, func(t *testing.T) {
@@ -165,6 +166,7 @@ func TestChatCompletion(t *testing.T) {
 			if strings.HasPrefix(tc.Input.Model, "gemini") {
 				output, err = chatCompleteGemini(ctx, gemini_apikey, tc.Input.Model, b)
 			}
+			fmt.Println("OUTPUT", string(output))
 
 			if err != nil {
 				t.Fatalf("Failed to unmarshal test cases: %v", err)

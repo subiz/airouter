@@ -69,6 +69,27 @@ type GeminiFunctionResponse struct {
 	Response map[string]any `json:"response"`
 }
 
+func toGeminiSchema(schema *JSONSchema) *header.JSONSchema {
+	if schema == nil {
+		return nil
+	}
+	geminiSchema := &header.JSONSchema{
+		Type:        schema.Type,
+		Description: schema.Description,
+		Required:    schema.Required,
+	}
+	if len(schema.Properties) > 0 {
+		geminiSchema.Properties = make(map[string]*header.JSONSchema)
+		for key, prop := range schema.Properties {
+			geminiSchema.Properties[key] = toGeminiSchema(prop)
+		}
+	}
+	if schema.Items != nil {
+		geminiSchema.Items = toGeminiSchema(schema.Items)
+	}
+	return geminiSchema
+}
+
 // ToGeminiRequestJSON converts an OpenAIChatRequest to a Gemini-compatible JSON request string.
 func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 	var geminiTools []*GeminiTool
@@ -109,26 +130,7 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 
 	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {
 		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
-		schema := req.ResponseFormat.JSONSchema.Schema
-		geminiSchema := &header.JSONSchema{
-			Type:       schema.Type,
-			Required:   schema.Required,
-			Properties: make(map[string]*header.JSONSchema),
-		}
-		for key, prop := range schema.Properties {
-			geminiProp := &header.JSONSchema{
-				Type:        prop.Type,
-				Description: prop.Description,
-			}
-			if prop.Items != nil {
-				geminiProp.Items = &header.JSONSchema{
-					Type:        prop.Items.Type,
-					Description: prop.Items.Description,
-				}
-			}
-			geminiSchema.Properties[key] = geminiProp
-		}
-		geminiReq.GenerationConfig.ResponseSchema = geminiSchema
+		geminiReq.GenerationConfig.ResponseSchema = toGeminiSchema(req.ResponseFormat.JSONSchema.Schema)
 	}
 
 	var contents []*GeminiContent
@@ -383,6 +385,7 @@ func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []by
 		return nil, err
 	}
 
+	// fmt.Println("REA", string(requestb))
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
