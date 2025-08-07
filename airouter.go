@@ -376,6 +376,11 @@ var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reache
 func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []byte) ([]byte, error) {
 	rq := &OpenAIChatRequest{}
 	json.Unmarshal(request, rq)
+	if strings.HasPrefix(model, "gpt-5-") {
+		// those models only support temperatture parameters = 1
+		// https://community.openai.com/t/temperature-in-gpt-5-models/1337133/4
+		rq.Temperature = 1
+	}
 	request, _ = json.Marshal(rq)
 	url := "https://api.openai.com/v1/chat/completions"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request))
