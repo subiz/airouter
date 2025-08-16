@@ -2,8 +2,8 @@ package airouter
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -69,7 +69,6 @@ type ResponseTestCase struct {
 }
 
 func TestResponseConversion(t *testing.T) {
-	// Read the test cases from the JSON file
 	file, err := os.ReadFile("./testcases/response_testcases.json")
 	if err != nil {
 		t.Fatalf("Failed to read test cases file: %v", err)
@@ -85,6 +84,7 @@ func TestResponseConversion(t *testing.T) {
 			// 1. Manually construct the GeminiAPIResponse from the test case data.
 			// 2. Call the function under test.
 			actualResponse, err := toOpenAIChatResponse(tc.Gemini)
+			actualResponse.Created = 0 // ignore this field
 			if err != nil {
 				t.Fatalf("toOpenAIChatResponse failed: %v", err)
 			}

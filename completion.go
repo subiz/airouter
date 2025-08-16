@@ -19,7 +19,7 @@ import (
 
 type AIFunction struct {
 	header.AIFunction
-	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) // "", true, nil -> abandon completion, stop the flow immediately
+	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) // "", true -> abandon completion, stop the flow immediately
 }
 
 type EmbeddingOutput struct {
@@ -54,7 +54,15 @@ type TotalCost struct {
 	USD int64 `json:"usd"` // 1000000000
 }
 
-func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string, stopAfterFunctionCall bool) (string, CompletionOutput, error) {
+func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
+	return _chatComplete(ctx, model, instruction, histories, functions, responseformat, toolchoice, true)
+}
+
+func ChatCompleteQuiet(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
+	return _chatComplete(ctx, model, instruction, histories, functions, responseformat, toolchoice, false)
+}
+
+func _chatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string, printlog bool) (string, CompletionOutput, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -135,15 +143,13 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 	tokenUsages := []*Usage{}
 
 	for range 5 { // max 5 loops
-		if stopAfterFunctionCall && functioncalled {
+		if functioncalled {
 			break
 		}
 
 		// Retrieve the value and assert it as a string
 		accid, _ := ctx.Value("account_id").(string)
 		convoid, _ := ctx.Value("conversation_id").(string)
-
-		te := time.Now()
 
 		// send to subiz server
 		q := neturl.Values{}
@@ -176,11 +182,14 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 			}
 		}
 
-		cachehit := "HIT"
-		if len(cache) == 0 {
-			cachehit = "MISS"
+		if printlog {
+			cachehit := "HIT"
+			if len(cache) == 0 {
+				cachehit = "MISS"
+			}
+			log.Info(accid, log.Stack(), "LLM", cachehit, convoid, string(requestbody))
 		}
-		log.Info(accid, log.Stack(), "SUBMITLLM", cachehit, convoid, string(requestbody), time.Since(te))
+
 		if len(cache) > 0 {
 			json.Unmarshal(cache, completion)
 		} else {
