@@ -141,7 +141,6 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 
 	var totalCost float64
 	tokenUsages := []*Usage{}
-
 	for range 5 { // max 5 loops
 		if functioncalled {
 			break
@@ -223,7 +222,9 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 		if len(completion.Choices) == 0 {
 			break
 		}
-		tokenUsages = append(tokenUsages, completion.Usage)
+		if completion.Usage != nil {
+			tokenUsages = append(tokenUsages, completion.Usage)
+		}
 		if len(completion.Choices) == 0 {
 			break
 		}
