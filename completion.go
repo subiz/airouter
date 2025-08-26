@@ -190,8 +190,12 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 		}
 
 		if len(cache) > 0 {
-			json.Unmarshal(cache, completion)
-		} else {
+			if err = json.Unmarshal(cache, completion); err != nil {
+				cache = nil // invalid cache
+			}
+		}
+
+		if len(cache) == 0 {
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestbody))
 			if err != nil {
 				return "", CompletionOutput{}, log.EServer(err)
@@ -283,6 +287,8 @@ exit:
 }
 
 func GetEmbedding(ctx context.Context, model string, text string) ([]float32, EmbeddingOutput, error) {
+	defer header.KLock(text)()
+
 	text = strings.TrimSpace(text)
 	if len(text) == 0 {
 		return nil, EmbeddingOutput{}, nil
@@ -333,8 +339,9 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 
 	if len(cache) > 0 {
 		output := EmbeddingOutput{}
-		json.Unmarshal(cache, &output)
-		return output.Vector, output, nil
+		if err := json.Unmarshal(cache, &output); err == nil {
+			return output.Vector, output, nil
+		}
 	}
 
 	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
