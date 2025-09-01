@@ -195,6 +195,23 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 		geminiReq.SystemInstruction = &GeminiContent{Parts: strsToParts(systemmsgs)}
 	}
 
+	// inject user or gemini will return
+	// Please ensure that function call turn comes immediately after a user turn or after a function response turn.
+	newcontents := []*GeminiContent{}
+	for i, msg := range contents {
+		if msg.Role == "model" {
+			for _, part := range msg.Parts {
+				if part.FunctionCall != nil {
+					if i == 0 || contents[i-1].Role != "user" {
+						newcontents = append(newcontents, &GeminiContent{Role: "user"})
+					}
+				}
+			}
+		}
+		newcontents = append(newcontents, msg)
+	}
+	contents = newcontents
+
 	if len(contents) > 0 {
 		// make sure the last content must be user message
 		// or gemini will emit

@@ -203,7 +203,200 @@
       }
     }
   },
-
+  "tool_call_2": {
+    "openai": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0",
+              "type": "function",
+              "function": {
+                "name": "system_list_discounts",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "system_list_discounts",
+          "content": "Giảm 50% cho toàn bộ tour",
+          "tool_call_id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_list_discounts",
+            "description": "List all available discounts",
+            "parameters": null
+          },
+          "output": ""
+        }
+      ]
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "hi"
+            }
+          ],
+          "role": "user"
+        },
+        {
+          "parts": [
+            {
+              "functionCall": {
+                "name": "system_list_discounts",
+                "args": {}
+              }
+            }
+          ],
+          "role": "model"
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "functionResponse": {
+                "name": "system_list_discounts",
+                "response": {
+                  "text": "Giảm 50% cho toàn bộ tour"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "system_list_discounts",
+              "description": "List all available discounts"
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      }
+    }
+  },
+  "tool_call_3": {
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "hi"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0",
+              "type": "function",
+              "function": {
+                "name": "system_list_discounts",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "system_list_discounts",
+          "content": "Giảm 50% cho toàn bộ tour",
+          "tool_call_id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_list_discounts",
+            "description": "List all available discounts",
+            "parameters": null
+          },
+          "output": ""
+        }
+      ]
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "hi"
+          }
+        ]
+      },
+      "contents": [
+        {
+          "role": "user"
+        },
+        {
+          "parts": [
+            {
+              "functionCall": {
+                "name": "system_list_discounts",
+                "args": {}
+              }
+            }
+          ],
+          "role": "model"
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "functionResponse": {
+                "name": "system_list_discounts",
+                "response": {
+                  "text": "Giảm 50% cho toàn bộ tour"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "system_list_discounts",
+              "description": "List all available discounts"
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0,
+        "topP": 1
+      }
+    }
+  },
   "tool_call_empty_param": {
     "openai": {
       "messages": [

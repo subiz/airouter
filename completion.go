@@ -141,11 +141,8 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 
 	var totalCost float64
 	tokenUsages := []*Usage{}
-	for range 5 { // max 5 loops
-		if functioncalled {
-			break
-		}
 
+	for range 5 { // max 5 loops
 		// Retrieve the value and assert it as a string
 		accid, _ := ctx.Value("account_id").(string)
 		convoid, _ := ctx.Value("conversation_id").(string)
@@ -234,8 +231,8 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 		}
 		toolCalls := completion.Choices[0].Message.ToolCalls
 		// Abort early if there are no tool calls
-		if len(toolCalls) == 0 {
-			break
+		if len(toolCalls) == 0 || functioncalled {
+			break // only allow function call once
 		}
 
 		// If there is a was a function call, continue the conversation

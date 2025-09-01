@@ -268,6 +268,7 @@ type ToolFunction struct {
 type OpenAITool struct {
 	Type     string   `json:"type"`
 	Function Function `json:"function"`
+	_Output  string   `json:"_output"` // our fake
 }
 
 type JSONSchema struct {
