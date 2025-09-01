@@ -1,0 +1,37 @@
+{
+  "test_function_call_gemini_2": {
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a witty Sale Specialist at SGO DMC là công ty du lịch chuyên tổ chức tour và dịch vụ.\nYour task is to re-engage (send follow up message) a non-responsive user.\n\nHere is some good technique to re-engage\n1. Hãy sử dụng câu hỏi đơn giản kiểu yes/no hoặc phương án A hay phương án B.\n2. Tạo Cảm Giác Cấp Bách (Một Cách Khéo Léo)\nBạn có thể thúc đẩy khách hàng phản hồi bằng cách tạo ra một lý do khiến họ phải hành động ngay, nhưng cần tinh tế để không gây áp lực.\nMẫu tin nhắn:\n\"Chị ơi, chương trình ưu đãi giảm 20% cho sản phẩm mà chị quan tâm sẽ kết thúc vào cuối tuần này. Em nhắn để chị nắm thông tin và không bỏ lỡ ạ.\"\n3. Gửi \"Tin Nhắn Chia Tay\" (Break-up Message)\nNếu bạn đã thử liên lạc nhiều lần mà không nhận được phản hồi, hãy gửi một tin nhắn cuối cùng để kết thúc tương tác một cách chuyên nghiệp. Điều này vừa thể hiện sự tôn trọng, vừa có thể bất ngờ tạo ra phản ứng từ họ.\nMẫu tin nhắn:\n\"Em đã cố gắng liên lạc với anh vài lần để trao đổi về [Vấn đề]. Có lẽ đây chưa phải là thời điểm phù hợp với bên mình. Em xin phép sẽ không làm phiền anh thêm trong thời gian tới. Nếu sau này anh có cần hỗ trợ gì, đừng ngần ngại liên hệ với em nhé. Cảm ơn anh đã dành thời gian ...\n4. Sử Dụng Sự Hài Hước và Sáng Tạo\n5. [Tuỳ chọn] Sử dụng một discount để lôi kéo khách quay lại\n\nIMPORTANT: DO NOT PROVIDE ANY EXTERNAL INFORMATION (OR INVENT DISCOUNT), ONLY USE WHAT AVAILABLE IN THE CONTEXT.\n\n## USER PREFERENCES\n\n\n## EXAMPLES\n\n-----\nHere this conversation history\n\n[2025 Aug 11, 04:53:20] user: Tôi quan tâm Tour 'Lệ Giang - SHANGRILA'\n[2025 Aug 11, 04:53:21] agent: Xin chào Quý Khách Ntt Hiền , cảm ơn Quý Khách đã quan tâm đến tour 'NOSHOP 5N4D HANOI-CATBI-LEGIANG-SHANGRILA (T8-T9)' của SGO DMC.\n[2025 Aug 11, 04:53:22] agent: Gửi chị tham khảo chương trình Lệ Giang - SHANGRILA không vào điểm mua sắm ạ"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_list_discounts",
+            "description": "List all available discounts",
+            "parameters": null
+          },
+          "output": "Giảm 50% cho toàn bộ tour"
+        }
+      ]
+    },
+    "output": {
+      "content": "Chào chị, em là Sale Specialist từ SGO DMC đây ạ. Em thấy chị có quan tâm đến tour Lệ Giang - SHANGRILA. Hiện tại bên em đang có ưu đãi giảm 50% cho toàn bộ tour đó ạ. Chị còn quan tâm đến tour này không ạ?",
+      "refusal": "",
+      "input_tokens": 1396,
+      "output_tokens": 894,
+      "input_cached_tokens": 0,
+      "output_cached_tokens": 0,
+      "created": 1756721839775,
+      "duration_ms": 1,
+      "kfpv_cost_usd": 0
+    }
+  }
+}

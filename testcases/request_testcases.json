@@ -337,8 +337,7 @@
             "name": "system_list_discounts",
             "description": "List all available discounts",
             "parameters": null
-          },
-          "output": ""
+          }
         }
       ]
     },
