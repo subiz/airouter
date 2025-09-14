@@ -8,6 +8,8 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 
 	"github.com/subiz/log"
@@ -268,7 +270,7 @@ type ToolFunction struct {
 type OpenAITool struct {
 	Type     string   `json:"type"`
 	Function Function `json:"function"`
-	Output  string   `json:"output"` // our fake
+	Output   string   `json:"output"` // our fake
 }
 
 type JSONSchema struct {
@@ -362,13 +364,18 @@ type OpenAIChatResponse struct {
 	ServiceTier string         `json:"service_tier,omitempty"`
 }
 
-func ChatCompleteAPI(ctx context.Context, apikey, model string, request []byte) (OpenAIChatResponse, error) {
+func ChatCompleteAPI(ctx context.Context, apikey string, payload []byte) (OpenAIChatResponse, error) {
 	var output []byte
 	var err error
+
+	request := OpenAIChatRequest{}
+	json.Unmarshal(payload, &request)
+	model := request.Model
+
 	if strings.HasPrefix(model, "gemini") {
-		output, err = chatCompleteGemini(ctx, apikey, model, request)
+		output, err = chatCompleteGemini(ctx, apikey, request)
 	} else {
-		output, err = chatCompleteChatGPT(ctx, apikey, model, request)
+		output, err = chatCompleteChatGPT(ctx, apikey, request)
 	}
 
 	if len(output) == 0 && err != nil {
@@ -407,15 +414,14 @@ func GetEmbeddingAPI(ctx context.Context, apikey, model, text string) (OpenAIEmb
 
 var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reached","type": "timeout"}}`)
 
-func chatCompleteChatGPT(ctx context.Context, apikey, model string, request []byte) ([]byte, error) {
-	rq := &OpenAIChatRequest{}
-	json.Unmarshal(request, rq)
+func chatCompleteChatGPT(ctx context.Context, apikey string, rq OpenAIChatRequest) ([]byte, error) {
+	model := rq.Model
 	if strings.HasPrefix(model, "gpt-5-") {
 		// those models only support temperatture parameters = 1
 		// https://community.openai.com/t/temperature-in-gpt-5-models/1337133/4
 		rq.Temperature = 1
 	}
-	request, _ = json.Marshal(rq)
+	request, _ := json.Marshal(rq)
 	url := "https://api.openai.com/v1/chat/completions"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request))
 	if err != nil {
@@ -531,4 +537,48 @@ func getOpenAIEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 		return out, log.EProvider(err, "openai", "embedding", log.M{"model": model, "status": resp.StatusCode, "_payload": bodyBytes})
 	}
 	return out, err
+}
+
+// for testing only
+func FakeBackend(rawURL string, input []byte) (int, []byte) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return 400, []byte("invalid url")
+	}
+
+	if parsedURL.Host == "test" && parsedURL.Path == "/embeddings" {
+		model := parsedURL.Query().Get("model")
+		var apikey string
+		if strings.HasPrefix(model, "gemini") {
+			apikey = os.Getenv("GEMINI_API_KEY")
+		} else {
+			apikey = os.Getenv("OPENAI_API_KEY")
+		}
+		out, err := GetEmbeddingAPI(context.Background(), apikey, model, string(input))
+		if err != nil {
+			return 500, []byte(err.Error())
+		}
+		b, _ := json.Marshal(out)
+		return 200, b
+	}
+
+	if parsedURL.Host == "test" && parsedURL.Path == "/completions" {
+		var apikey string
+		request := OpenAIChatRequest{}
+		json.Unmarshal(input, &request)
+		model := request.Model
+		if strings.HasPrefix(model, "gemini") {
+			apikey = os.Getenv("GEMINI_API_KEY")
+		} else {
+			apikey = os.Getenv("OPENAI_API_KEY")
+		}
+		out, err := ChatCompleteAPI(context.Background(), apikey, input)
+		if err != nil {
+			return 500, nil
+		}
+		b, _ := json.Marshal(out)
+		return 200, b
+	}
+
+	return 404, []byte("not found " + rawURL)
 }

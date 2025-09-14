@@ -418,17 +418,15 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 	}, nil
 }
 
-func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []byte) ([]byte, error) {
-	request := OpenAIChatRequest{}
-	json.Unmarshal(requestb, &request)
-
+func chatCompleteGemini(ctx context.Context, apikey string, request OpenAIChatRequest) ([]byte, error) {
+	model := request.Model
 	var err error
-	requestb, err = ToGeminiRequestJSON(request)
+	requestb, err := ToGeminiRequestJSON(request)
 	if err != nil {
 		return nil, err
 	}
 
-	// fmt.Println("REA", string(requestb))
+	fmt.Println("REA", string(requestb), apikey)
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {

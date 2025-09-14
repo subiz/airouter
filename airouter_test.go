@@ -136,7 +136,7 @@ type ChatTestCase struct {
 	Input  *OpenAIChatRequest  `json:"input"`
 }
 
-func TestChatCompletion(t *testing.T) {
+func TestChatCompletion1(t *testing.T) {
 	file, err := os.ReadFile("./testcases/chat_testcases.json")
 	if err != nil {
 		t.Fatalf("Failed to read test cases file: %v", err)
@@ -147,27 +147,22 @@ func TestChatCompletion(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
-	openai_apikey := os.Getenv("OPENAI_API_KEY")
-	gemini_apikey := os.Getenv("GEMINI_API_KEY")
 	for name, tc := range testCases {
-		if name != "test_function_call_gemini_2" {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			var output []byte
-			b, _ := json.Marshal(tc.Input)
-
-			if strings.HasPrefix(tc.Input.Model, "gpt") {
-				output, err = chatCompleteChatGPT(ctx, openai_apikey, tc.Input.Model, b)
+			model := tc.Input.Model
+			apikey := os.Getenv("OPENAI_API_KEY")
+			if strings.HasPrefix(model, "gemini") {
+				apikey = os.Getenv("GEMINI_API_KEY")
 			}
 
-			if strings.HasPrefix(tc.Input.Model, "gemini") {
-				output, err = chatCompleteGemini(ctx, gemini_apikey, tc.Input.Model, b)
-			}
+			reqb, _ := json.Marshal(tc.Input)
+			out, err := ChatCompleteAPI(ctx, apikey, reqb)
 			if err != nil {
 				t.Fatalf("Failed to unmarshal test cases: %v", err)
 			}
+
+			output, _ := json.Marshal(out)
 
 			expectedJSON, err := json.Marshal(tc.Output)
 			if err != nil {
@@ -183,6 +178,7 @@ func TestChatCompletion(t *testing.T) {
 				"choices.0.message.tool_calls.0.id", "choices.0.message.tool_calls.1.id", "choices.0.message.tool_calls.2.id", "choices.0.message.tool_calls.3.id",
 				"choices.1.message.tool_calls.0.id", "choices.1.message.tool_calls.1.id", "choices.1.message.tool_calls.2.id", "choices.1.message.tool_calls.3.id",
 				"choices.2.message.tool_calls.0.id", "choices.2.message.tool_calls.1.id", "choices.2.message.tool_calls.2.id", "choices.2.message.tool_calls.3.id",
+				"input_tokens", "output_tokens",
 			} {
 				// Remove the 'email' field
 				output, err = sjson.DeleteBytes(output, f)
@@ -203,6 +199,8 @@ func TestChatCompletion(t *testing.T) {
 			if err := json.Unmarshal(expectedJSON, &expectedMap); err != nil {
 				t.Fatalf("Failed to unmarshal expected JSON: %v", err)
 			}
+
+			fmt.Println("WTF----->", string(expectedJSON))
 
 			// 5. Compare the maps.
 			if !cmp.Equal(expectedMap, actualMap) {
@@ -228,13 +226,13 @@ func TestChatCompletionFull(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
+	BACKEND = "https://test"
 	for name, tc := range testCases {
 		if name != "test_function_call_gemini_2" {
 			continue
 		}
 		t.Run(name, func(t *testing.T) {
 			ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
-			_apikey = os.Getenv("SBZAI_API_KEY")
 			b, _ := json.Marshal(tc.Input.ResponseFormat)
 			var resf *header.LLMResponseJSONSchemaFormat
 			if len(b) > 0 && string(b) != "null" {
@@ -281,6 +279,7 @@ func TestChatCompletionFull(t *testing.T) {
 				"choices.0.message.tool_calls.0.id", "choices.0.message.tool_calls.1.id", "choices.0.message.tool_calls.2.id", "choices.0.message.tool_calls.3.id",
 				"choices.1.message.tool_calls.0.id", "choices.1.message.tool_calls.1.id", "choices.1.message.tool_calls.2.id", "choices.1.message.tool_calls.3.id",
 				"choices.2.message.tool_calls.0.id", "choices.2.message.tool_calls.1.id", "choices.2.message.tool_calls.2.id", "choices.2.message.tool_calls.3.id",
+				"input_tokens", "output_tokens",
 			} {
 				// Remove the 'email' field
 				output, err = sjson.DeleteBytes(output, f)

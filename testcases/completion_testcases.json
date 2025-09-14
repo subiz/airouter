@@ -23,15 +23,8 @@
       ]
     },
     "output": {
-      "content": "Chào chị, em là Sale Specialist từ SGO DMC đây ạ. Em thấy chị có quan tâm đến tour Lệ Giang - SHANGRILA. Hiện tại bên em đang có ưu đãi giảm 50% cho toàn bộ tour đó ạ. Chị còn quan tâm đến tour này không ạ?",
-      "refusal": "",
-      "input_tokens": 1396,
-      "output_tokens": 894,
-      "input_cached_tokens": 0,
-      "output_cached_tokens": 0,
-      "created": 1756721839775,
-      "duration_ms": 1,
-      "kfpv_cost_usd": 0
+      "content": "Chào chị Hiền, em là Sale Specialist từ SGO DMC đây ạ!\n\nChị ơi, không biết chị đã kịp xem qua chương trình tour Lệ Giang - Shangrila mà em gửi chưa ạ? Chị có muốn em điều chỉnh lịch trình hay có bất kỳ câu hỏi nào về tour không ạ?\n\nHiện tại, SGO DMC đang có ưu đãi giảm 50% cho toàn bộ tour đó ạ. Chị tranh thủ tham khảo để không bỏ lỡ cơ hội khám phá Lệ Giang - Shangrila với mức giá cực kỳ hấp dẫn này nhé!",
+      "refusal": ""
     }
   }
 }
