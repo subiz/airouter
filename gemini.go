@@ -15,6 +15,7 @@ import (
 )
 
 // GeminiRequest represents the structure of a request to the Gemini API.
+// https://ai.google.dev/api/generate-content#v1beta.GenerationConfig
 type GeminiRequest struct {
 	Model             string                  `json:"model"`
 	SystemInstruction *GeminiContent          `json:"systemInstruction,omitempty"`
@@ -36,15 +37,24 @@ type GeminiPart struct {
 	FunctionResponse *GeminiFunctionResponse `json:"functionResponse,omitempty"`
 }
 
+// https://ai.google.dev/api/generate-content#ThinkingConfig
 type GeminiThinkingConfig struct {
+	// The number of thoughts tokens that the model should generate.
 	ThinkingBudget int `json:"thinkingBudget,omitempty"`
+
+	// Indicates whether to include thoughts in the response. If true, thoughts are returned only when available.
+	IncludeThoughts bool `json:"includeThoughts"`
 }
 
 // GeminiGenerationConfig represents the generation configuration.
 type GeminiGenerationConfig struct {
-	CandidateCount   int                   `json:"candidateCount"`
+	StopSequences    []string              `json:"stopSequences,omitempty"`
+	CandidateCount   int                   `json:"candidateCount,omitempty"`
+	MaxOutputTokens  int                   `json:"maxOutputTokens,omitempty"`
 	Temperature      float32               `json:"temperature"`
-	TopP             float32               `json:"topP"`
+	TopP             float32               `json:"topP,omitempty"`
+	TopK             float32               `json:"topK,omitempty"`
+	Seed             int                   `json:"seed,omitempty"`
 	ResponseMIMEType string                `json:"responseMimeType,omitempty"`
 	ResponseSchema   *header.JSONSchema    `json:"responseSchema,omitempty"`
 	ThinkingConfig   *GeminiThinkingConfig `json:"thinkingConfig,omitempty"`
@@ -127,8 +137,10 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 		Model: "models/" + ToGeminiModel(req.Model),
 		GenerationConfig: &GeminiGenerationConfig{
 			CandidateCount: 1,
+			Seed:           req.Seed,
 			Temperature:    req.Temperature,
 			TopP:           req.TopP,
+			// TopK: req.TopK,
 		},
 		Tools: geminiTools,
 	}
@@ -418,17 +430,15 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 	}, nil
 }
 
-func chatCompleteGemini(ctx context.Context, apikey, model string, requestb []byte) ([]byte, error) {
-	request := OpenAIChatRequest{}
-	json.Unmarshal(requestb, &request)
-
+func chatCompleteGemini(ctx context.Context, apikey string, request OpenAIChatRequest) ([]byte, error) {
+	model := request.Model
 	var err error
-	requestb, err = ToGeminiRequestJSON(request)
+	requestb, err := ToGeminiRequestJSON(request)
 	if err != nil {
 		return nil, err
 	}
 
-	// fmt.Println("REA", string(requestb))
+	fmt.Println("REA", string(requestb), apikey)
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {

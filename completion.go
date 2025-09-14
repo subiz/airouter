@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"github.com/subiz/header"
 	"github.com/subiz/log"
 )
+
+var BACKEND = "https://api.subiz.com.vn/4.1/ai"
 
 type AIFunction struct {
 	header.AIFunction
@@ -57,10 +60,10 @@ type TotalCost struct {
 type CompletionReasoning struct {
 	Effort    string // high, medium, low
 	MaxTokens int
-	Enabled   bool
 }
 
 type CompletionInput struct {
+	Seed           int `json:"seed,omitempty"`
 	Model          string
 	NoLog          bool // disable log
 	Instruct       string
@@ -131,15 +134,19 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 	}
 
 	instruction := CleanString(input.Instruct)
+	seed := input.Seed
+	if seed == -1 {
+		seed = rand.Intn(1000000)
+	}
 	params := OpenAIChatRequest{
-		Seed:        0,
+		Seed:        input.Seed,
 		Model:       input.Model,
 		Messages:    []OpenAIChatMessage{{Role: "system", Content: &instruction}},
 		Temperature: 0.0,
 		TopP:        1.0,
 	}
 
-	if input.Reasoning != nil && input.Reasoning.Enabled {
+	if input.Reasoning != nil && input.Reasoning.Effort != "" {
 		params.Reasoning = &OpenAIReasoning{
 			Effort: input.Reasoning.Effort,
 		}
@@ -204,10 +211,10 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 			q.Set("x-purpose", id)
 		}
 
-		url := "https://api.subiz.com.vn/4.1/ai/completions?" + q.Encode()
+		url := BACKEND + "/completions?" + q.Encode()
 		requestbody, _ = json.Marshal(params)
 
-		md5sum := GetMD5Hash(string(requestbody))
+		md5sum := GetMD5Hash(url + string(requestbody))
 		cachepath := "./.cache/cc-" + md5sum
 		cache, err := os.ReadFile(cachepath)
 		if err != nil {
@@ -235,21 +242,10 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 		}
 
 		if len(cache) == 0 {
-			req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestbody))
-			if err != nil {
-				return "", CompletionOutput{}, log.EServer(err)
-			}
-
-			req.Header.Set("Authorization", "Bearer "+_apikey)
-			req.Header.Set("Content-Type", "application/json")
-			resp, err := http.DefaultClient.Do(req)
+			resp, output, err := sendPOST(url, _apikey, requestbody)
 			if err != nil {
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
 			}
-			defer resp.Body.Close()
-			buf := new(bytes.Buffer)
-			buf.ReadFrom(resp.Body)
-			output := buf.Bytes()
 			if resp.StatusCode != 200 {
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 			}
@@ -257,7 +253,6 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 			pricestr := resp.Header.Get("X-Cost-USD")
 			pricef, _ := strconv.ParseFloat(pricestr, 64)
 			totalCost += pricef
-
 			json.Unmarshal(output, completion)
 			os.WriteFile(cachepath, output, 0644)
 		}
@@ -362,7 +357,7 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 
 	q.Set("model", model)
 
-	url := "https://api.subiz.com.vn/4.1/ai/embeddings?" + q.Encode()
+	url := BACKEND + "/embeddings?" + q.Encode()
 	md5sum := GetMD5Hash(text)
 	cachepath := "./.cache/eb-" + md5sum
 	cache, err := os.ReadFile(cachepath)
@@ -384,28 +379,15 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	}
 
 	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(text)))
-	if err != nil {
-		return nil, EmbeddingOutput{}, log.EServer(err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+_apikey)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	resp, resoutput, err := sendPOST(url, _apikey, []byte(text))
+	if err == nil {
 		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
 	}
-	defer resp.Body.Close()
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	resoutput := buf.Bytes()
 	if resp.StatusCode != 200 {
 		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
 	}
 
 	json.Unmarshal(resoutput, response)
-
 	pricestr := resp.Header.Get("X-Cost-USD") // fpv
 	pricef, _ := strconv.ParseFloat(pricestr, 64)
 
@@ -426,6 +408,29 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	cache, _ = json.Marshal(embeddingoutput)
 	os.WriteFile(cachepath, cache, 0644)
 	return embeddingoutput.Vector, embeddingoutput, nil
+}
+
+func sendPOST(url, token string, payload []byte) (*http.Response, []byte, error) {
+	if strings.HasPrefix(url, "https://test/") {
+		status, body := FakeBackend(url, payload)
+		return &http.Response{StatusCode: status}, body, nil
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, nil, log.EProvider(err, "openai", "completion")
+	}
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	return resp, buf.Bytes(), nil
 }
 
 func GetMD5Hash(text string) string {
