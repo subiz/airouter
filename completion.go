@@ -54,15 +54,51 @@ type TotalCost struct {
 	USD int64 `json:"usd"` // 1000000000
 }
 
+type CompletionReasoning struct {
+	Effort    string // high, medium, low
+	MaxTokens int
+	Enabled   bool
+}
+
+type CompletionInput struct {
+	Model          string
+	NoLog          bool // disable log
+	Instruct       string
+	Messages       []*header.LLMChatHistoryEntry
+	ResponseFormat *header.LLMResponseJSONSchemaFormat
+	ToolChoice     string
+	Functions      []*AIFunction
+	Reasoning      *CompletionReasoning
+}
+
 func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
-	return _chatComplete(ctx, model, instruction, histories, functions, responseformat, toolchoice, true)
+	return _chatComplete(ctx, CompletionInput{
+		Model:          model,
+		Instruct:       instruction,
+		Messages:       histories,
+		ResponseFormat: responseformat,
+		ToolChoice:     toolchoice,
+		Functions:      functions,
+	})
+}
+
+func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
+	return _chatComplete(ctx, input)
 }
 
 func ChatCompleteQuiet(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
-	return _chatComplete(ctx, model, instruction, histories, functions, responseformat, toolchoice, false)
+	return _chatComplete(ctx, CompletionInput{
+		Model:          model,
+		Instruct:       instruction,
+		Messages:       histories,
+		ResponseFormat: responseformat,
+		ToolChoice:     toolchoice,
+		Functions:      functions,
+		NoLog:          true,
+	})
 }
 
-func _chatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string, printlog bool) (string, CompletionOutput, error) {
+func _chatComplete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -70,7 +106,7 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 	start := time.Now()
 	var tools []OpenAITool
 	var fnM = map[string]*AIFunction{}
-	for _, fn := range functions {
+	for _, fn := range input.Functions {
 		fnM[fn.Name] = fn
 		f := OpenAITool{
 			Type: "function",
@@ -94,20 +130,20 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 		tools = append(tools, f)
 	}
 
-	instruction = CleanString(instruction)
+	instruction := CleanString(input.Instruct)
 	params := OpenAIChatRequest{
 		Seed:        0,
-		Model:       model,
+		Model:       input.Model,
 		Messages:    []OpenAIChatMessage{{Role: "system", Content: &instruction}},
 		Temperature: 0.0,
 		TopP:        1.0,
 	}
 
-	if toolchoice != "" {
-		params.ToolChoice = toolchoice
+	if input.ToolChoice != "" {
+		params.ToolChoice = input.ToolChoice
 	}
 
-	for _, entry := range histories {
+	for _, entry := range input.Messages {
 		content := entry.Content
 		if entry.Role == "user" {
 			// param.Messages = append(param.Messages, completion.Choices[0].Message.ToParam())
@@ -120,13 +156,13 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 		}
 	}
 
-	if responseformat != nil {
+	if input.ResponseFormat != nil {
 		params.ResponseFormat = &ResponseFormat{
 			Type: "json_schema",
 			JSONSchema: &RJSONSchema{
-				Name:   responseformat.GetName(),
-				Strict: responseformat.GetStrict(),
-				Schema: toOpenAISchema(responseformat.GetSchema()),
+				Name:   input.ResponseFormat.GetName(),
+				Strict: input.ResponseFormat.GetStrict(),
+				Schema: toOpenAISchema(input.ResponseFormat.GetSchema()),
 			},
 		}
 	}
@@ -178,7 +214,7 @@ func _chatComplete(ctx context.Context, model string, instruction string, histor
 			}
 		}
 
-		if printlog {
+		if !input.NoLog {
 			cachehit := "HIT"
 			if len(cache) == 0 {
 				cachehit = "MISS"
