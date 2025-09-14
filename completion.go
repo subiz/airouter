@@ -139,6 +139,12 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 		TopP:        1.0,
 	}
 
+	if input.Reasoning != nil && input.Reasoning.Enabled {
+		params.Reasoning = &OpenAIReasoning{
+			Effort: input.Reasoning.Effort,
+		}
+	}
+
 	if input.ToolChoice != "" {
 		params.ToolChoice = input.ToolChoice
 	}

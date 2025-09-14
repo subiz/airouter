@@ -36,13 +36,18 @@ type GeminiPart struct {
 	FunctionResponse *GeminiFunctionResponse `json:"functionResponse,omitempty"`
 }
 
+type GeminiThinkingConfig struct {
+	ThinkingBudget int `json:"thinkingBudget,omitempty"`
+}
+
 // GeminiGenerationConfig represents the generation configuration.
 type GeminiGenerationConfig struct {
-	CandidateCount   int                `json:"candidateCount"`
-	Temperature      float32            `json:"temperature"`
-	TopP             float32            `json:"topP"`
-	ResponseMIMEType string             `json:"responseMimeType,omitempty"`
-	ResponseSchema   *header.JSONSchema `json:"responseSchema,omitempty"`
+	CandidateCount   int                   `json:"candidateCount"`
+	Temperature      float32               `json:"temperature"`
+	TopP             float32               `json:"topP"`
+	ResponseMIMEType string                `json:"responseMimeType,omitempty"`
+	ResponseSchema   *header.JSONSchema    `json:"responseSchema,omitempty"`
+	ThinkingConfig   *GeminiThinkingConfig `json:"thinkingConfig,omitempty"`
 }
 
 // GeminiTool is a local struct to avoid genai dependency.
@@ -126,6 +131,27 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 			TopP:           req.TopP,
 		},
 		Tools: geminiTools,
+	}
+
+	if req.Reasoning != nil {
+		budget := 0
+		switch req.Reasoning.Effort {
+		case "low":
+			budget = 256
+		case "medium":
+			budget = 1024
+		case "high":
+			budget = 4096
+		}
+
+		if budget > 0 {
+			if geminiReq.GenerationConfig == nil {
+				geminiReq.GenerationConfig = &GeminiGenerationConfig{}
+			}
+			geminiReq.GenerationConfig.ThinkingConfig = &GeminiThinkingConfig{
+				ThinkingBudget: budget,
+			}
+		}
 	}
 
 	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {

@@ -305,6 +305,10 @@ type RJSONSchema struct {
 	Schema *JSONSchema `json:"schema"`
 }
 
+type OpenAIReasoning struct {
+	Effort string `json:"effort,omitempty"`
+}
+
 // OpenAIChatRequest mimics the structure of an OpenAI Chat Completion request.
 type OpenAIChatRequest struct {
 	Seed           int                 `json:"seed,omitempty"`
@@ -315,6 +319,7 @@ type OpenAIChatRequest struct {
 	Tools          []OpenAITool        `json:"tools"`
 	ResponseFormat *ResponseFormat     `json:"response_format,omitempty"`
 	ToolChoice     string              `json:"tool_choice,omitempty"`
+	Reasoning      *OpenAIReasoning    `json:"reasoning,omitempty"`
 }
 
 // OpenAIChoice mimics the structure of a choice in an OpenAI Chat Completion response.
