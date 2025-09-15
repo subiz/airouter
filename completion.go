@@ -72,6 +72,8 @@ type CompletionInput struct {
 	ToolChoice     string
 	Functions      []*AIFunction
 	Reasoning      *CompletionReasoning
+	Temperature    float32
+	TopP           float32
 }
 
 func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*AIFunction, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
@@ -82,6 +84,8 @@ func ChatComplete(ctx context.Context, model string, instruction string, histori
 		ResponseFormat: responseformat,
 		ToolChoice:     toolchoice,
 		Functions:      functions,
+		TopP:           1,
+		Temperature:    0,
 	})
 }
 
@@ -98,6 +102,8 @@ func ChatCompleteQuiet(ctx context.Context, model string, instruction string, hi
 		ToolChoice:     toolchoice,
 		Functions:      functions,
 		NoLog:          true,
+		TopP:           1,
+		Temperature:    0,
 	})
 }
 
@@ -142,8 +148,8 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 		Seed:        input.Seed,
 		Model:       input.Model,
 		Messages:    []OpenAIChatMessage{{Role: "system", Content: &instruction}},
-		Temperature: 0.0,
-		TopP:        1.0,
+		Temperature: input.Temperature,
+		TopP:        input.TopP,
 	}
 
 	if input.Reasoning != nil && input.Reasoning.Effort != "" {

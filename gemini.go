@@ -49,11 +49,10 @@ type GeminiThinkingConfig struct {
 // GeminiGenerationConfig represents the generation configuration.
 type GeminiGenerationConfig struct {
 	StopSequences    []string              `json:"stopSequences,omitempty"`
-	CandidateCount   int                   `json:"candidateCount,omitempty"`
+	// CandidateCount   int                   `json:"candidateCount,omitempty"`
 	MaxOutputTokens  int                   `json:"maxOutputTokens,omitempty"`
 	Temperature      float32               `json:"temperature"`
 	TopP             float32               `json:"topP,omitempty"`
-	TopK             float32               `json:"topK,omitempty"`
 	Seed             int                   `json:"seed,omitempty"`
 	ResponseMIMEType string                `json:"responseMimeType,omitempty"`
 	ResponseSchema   *header.JSONSchema    `json:"responseSchema,omitempty"`
@@ -136,11 +135,9 @@ func ToGeminiRequestJSON(req OpenAIChatRequest) ([]byte, error) {
 	geminiReq := GeminiRequest{
 		Model: "models/" + ToGeminiModel(req.Model),
 		GenerationConfig: &GeminiGenerationConfig{
-			CandidateCount: 1,
 			Seed:           req.Seed,
 			Temperature:    req.Temperature,
 			TopP:           req.TopP,
-			// TopK: req.TopK,
 		},
 		Tools: geminiTools,
 	}

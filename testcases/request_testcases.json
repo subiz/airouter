@@ -58,7 +58,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0.7,
         "topP": 1
       }
@@ -197,7 +196,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       }
@@ -293,7 +291,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       }
@@ -390,7 +387,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       }
@@ -527,7 +523,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       }
@@ -574,7 +569,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       }
@@ -599,7 +593,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       },
@@ -657,7 +650,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1,
         "responseMimeType": "application/json",
@@ -727,7 +719,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       },
@@ -854,7 +845,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1
       }
@@ -941,7 +931,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0,
         "topP": 1,
         "responseMimeType": "application/json",
@@ -1012,7 +1001,6 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "temperature": 0.7,
         "topP": 1,
         "thinkingConfig": {
@@ -1031,8 +1019,8 @@
         }
       ],
       "model": "gemini-2.5-flash-lite",
-      "temperature": 0,
-      "top_p": 1,
+      "temperature": 0.2,
+      "top_p": 0.5,
       "tools": null,
       "reasoning": {
         "effort": "high"
@@ -1051,9 +1039,9 @@
         }
       ],
       "generationConfig": {
-        "candidateCount": 1,
         "seed": 90,
-        "topP": 1,
+        "topP": 0.5,
+        "temperature": 0.2,
         "thinkingConfig": {
           "thinkingBudget": 4096
         }
