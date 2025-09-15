@@ -3,6 +3,7 @@ package airouter
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"

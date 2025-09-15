@@ -1020,5 +1020,44 @@
         }
       }
     }
+  },
+  "seed_0": {
+    "openai": {
+      "seed": 90,
+      "messages": [
+        {
+          "role": "system",
+          "content": "hello"
+        }
+      ],
+      "model": "gemini-2.5-flash-lite",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": null,
+      "reasoning": {
+        "effort": "high"
+      }
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash-lite",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "seed": 90,
+        "topP": 1,
+        "thinkingConfig": {
+          "thinkingBudget": 4096
+        }
+      }
+    }
   }
 }
