@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -59,10 +60,10 @@ type TotalCost struct {
 type CompletionReasoning struct {
 	Effort    string // high, medium, low
 	MaxTokens int
-	Enabled   bool
 }
 
 type CompletionInput struct {
+	Seed           int `json:"seed,omitempty"`
 	Model          string
 	NoLog          bool // disable log
 	Instruct       string
@@ -133,15 +134,19 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 	}
 
 	instruction := CleanString(input.Instruct)
+	seed := input.Seed
+	if seed == -1 {
+		seed = rand.Intn(1000000)
+	}
 	params := OpenAIChatRequest{
-		Seed:        0,
+		Seed:        input.Seed,
 		Model:       input.Model,
 		Messages:    []OpenAIChatMessage{{Role: "system", Content: &instruction}},
 		Temperature: 0.0,
 		TopP:        1.0,
 	}
 
-	if input.Reasoning != nil && input.Reasoning.Enabled {
+	if input.Reasoning != nil && input.Reasoning.Effort != "" {
 		params.Reasoning = &OpenAIReasoning{
 			Effort: input.Reasoning.Effort,
 		}
