@@ -253,7 +253,7 @@ func _chatComplete(ctx context.Context, input CompletionInput) (string, Completi
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
 			}
 			if resp.StatusCode != 200 {
-				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+				return "", CompletionOutput{}, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 			}
 
 			pricestr := resp.Header.Get("X-Cost-USD")
@@ -386,11 +386,11 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 
 	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
 	resp, resoutput, err := sendPOST(url, _apikey, []byte(text))
-	if err == nil {
+	if err != nil {
 		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
 	}
 	if resp.StatusCode != 200 {
-		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
+		return nil, EmbeddingOutput{}, log.EProvider(nil, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
 	}
 
 	json.Unmarshal(resoutput, response)
