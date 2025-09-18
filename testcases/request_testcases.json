@@ -1,5 +1,13 @@
 {
   "test_0_no_message": {
+    "api": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
     "openai": {
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
@@ -29,6 +37,15 @@
   },
 
   "test_1_simple_math": {
+    "api": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator" },
+        { "role": "user", "content": "1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
     "openai": {
       "messages": [
         { "role": "system", "content": "You are a calculator" },
@@ -64,7 +81,7 @@
     }
   },
   "tool_call": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
@@ -113,6 +130,64 @@
                   "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
                 },
                 "compare_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "openai": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        },
+        {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+              "type": "function",
+              "function": {
+                "name": "compare_cars",
+                "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+          "content": "toi khong biet"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "additionalProperties": false,
                   "type": "string",
                   "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
                 }
@@ -202,7 +277,7 @@
     }
   },
   "tool_call_2": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "role": "user",
@@ -210,7 +285,6 @@
         },
         {
           "role": "assistant",
-          "content": null,
           "tool_calls": [
             {
               "id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0",
@@ -230,17 +304,52 @@
         }
       ],
       "model": "gpt-4o-mini",
-      "temperature": 0,
       "top_p": 1,
       "tools": [
         {
           "type": "function",
           "function": {
             "name": "system_list_discounts",
-            "description": "List all available discounts",
-            "parameters": null
-          },
-          "output": ""
+            "description": "List all available discounts"
+          }
+        }
+      ]
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi"
+        },
+        {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0",
+              "type": "function",
+              "function": {
+                "name": "system_list_discounts",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "system_list_discounts",
+          "content": "Giảm 50% cho toàn bộ tour",
+          "tool_call_id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_list_discounts",
+            "description": "List all available discounts"
+          }
         }
       ]
     },
@@ -297,7 +406,7 @@
     }
   },
   "tool_call_3": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "role": "system",
@@ -305,7 +414,6 @@
         },
         {
           "role": "assistant",
-          "content": null,
           "tool_calls": [
             {
               "id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0",
@@ -334,6 +442,44 @@
             "name": "system_list_discounts",
             "description": "List all available discounts",
             "parameters": null
+          }
+        }
+      ]
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "hi"
+        },
+        {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0",
+              "type": "function",
+              "function": {
+                "name": "system_list_discounts",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "system_list_discounts",
+          "content": "Giảm 50% cho toàn bộ tour",
+          "tool_call_id": "call_dl61aLjDFO3wqtsPiv2-8Qw_0"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_list_discounts",
+            "description": "List all available discounts"
           }
         }
       ]
@@ -393,7 +539,7 @@
     }
   },
   "tool_call_empty_param": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
@@ -405,7 +551,6 @@
         },
         {
           "role": "assistant",
-          "content": null,
           "tool_calls": [
             {
               "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
@@ -442,6 +587,63 @@
                   "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
                 },
                 "compare_car_name": {
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ]
+    },
+    "openai": {
+      "messages": [
+        {
+          "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
+          "role": "system"
+        },
+        {
+          "content": "So sanh vinfast va bmw",
+          "role": "user"
+        },
+        {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+              "type": "function",
+              "function": {
+                "name": "compare_cars",
+                "arguments": "{\"base_car_name\": \"VinFast\", \"compare_car_name\": \"BMW\"}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_cz8Z6PtXSfkKWd8d5vPmHfS3",
+          "content": "toi khong biet"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "top_p": 1,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "additionalProperties": false,
                   "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
                 }
               },
@@ -530,7 +732,7 @@
   },
 
   "test_6_conversation_history": {
-    "openai": {
+    "api": {
       "messages": [
         { "role": "user", "content": "My favorite color is blue." },
         { "role": "assistant", "content": "That's a great color!" },
@@ -538,6 +740,15 @@
       ],
       "model": "gpt-4o-mini",
       "temperature": 0,
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [
+        { "role": "user", "content": "My favorite color is blue." },
+        { "role": "assistant", "content": "That's a great color!" },
+        { "role": "user", "content": "What is my favorite color?" }
+      ],
+      "model": "gpt-4o-mini",
       "top_p": 1
     },
     "gemini": {
@@ -575,10 +786,15 @@
     }
   },
   "test_7_no_user_messages": {
-    "openai": {
+    "api": {
       "messages": [{ "role": "system", "content": "This is a system prompt." }],
       "model": "gpt-4o-mini",
       "temperature": 0,
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [{ "role": "system", "content": "This is a system prompt." }],
+      "model": "gpt-4o-mini",
       "top_p": 1
     },
     "gemini": {
@@ -600,7 +816,7 @@
     }
   },
   "with_response_format_1": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
@@ -624,8 +840,48 @@
                 "description": "Name of the recipe"
               },
               "ingredients": {
+                "additionalProperties": false,
                 "type": "array",
                 "items": {
+                  "type": "string",
+                  "description": "Ingredient description"
+                },
+                "description": "List of ingredients"
+              }
+            },
+            "required": ["recipeName", "ingredients"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    "openai": {
+      "messages": [
+        {
+          "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
+          "role": "system"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "top_p": 1,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "intent",
+          "strict": true,
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "recipeName": {
+                "additionalProperties": false,
+                "type": "string",
+                "description": "Name of the recipe"
+              },
+              "ingredients": {
+                "additionalProperties": false,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
                   "type": "string",
                   "description": "Ingredient description"
                 },
@@ -676,7 +932,7 @@
     }
   },
   "10": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "role": "system",
@@ -689,6 +945,29 @@
       ],
       "model": "gemini-2.0-flash",
       "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_human_handoff",
+            "description": "Call this to hand over the conversation to human agent. Skip if already assigned to real human"
+          }
+        }
+      ]
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Xin chao"
+        },
+        {
+          "role": "user",
+          "content": "Bạn ơi cho mình hỏi mình muốn in hóa đơn bán ra một loạt thi lam ntn"
+        }
+      ],
+      "model": "gemini-2.0-flash",
       "top_p": 1,
       "tools": [
         {
@@ -736,7 +1015,7 @@
     }
   },
   "11": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "role": "system",
@@ -747,6 +1026,59 @@
       ],
       "model": "gemini-2.5-flash",
       "temperature": 0,
+      "top_p": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_collect_user_information",
+            "description": "Store collected user information",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "explain": {
+                  "type": "string",
+                  "description": "Quote the message that user mention the information",
+                  "additionalProperties": false
+                },
+                "key": {
+                  "type": "string",
+                  "description": "Key of the information, empty if not found",
+                  "additionalProperties": false
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the information you collected",
+                  "additionalProperties": false
+                },
+                "user_mention": {
+                  "type": "boolean",
+                  "description": "The information is provided by the user",
+                  "additionalProperties": false
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value of the information you extracted, only use if you can confirm correctly that the information belong to the user",
+                  "additionalProperties": false
+                }
+              },
+              "required": ["key", "explain", "user_mention", "value", "name"],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are an information extractor agent"
+        },
+        { "role": "system", "content": "User sent message on Website" },
+        { "role": "assistant", "content": "OK" }
+      ],
+      "model": "gemini-2.5-flash",
       "top_p": 1,
       "tools": [
         {
@@ -851,7 +1183,7 @@
     }
   },
   "12": {
-    "openai": {
+    "api": {
       "messages": [
         {
           "role": "system",
@@ -862,6 +1194,71 @@
       "temperature": 0,
       "top_p": 1,
       "tools": null,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "answer_plan",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "array",
+                "description": "action should be taken to answer the user query",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "description": "name of the action. Eg: 'greet', 'say-thanks'",
+                      "additionalProperties": false
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "additionalProperties": false
+                          },
+                          "value": {
+                            "type": "string",
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["name", "value"],
+                        "additionalProperties": false
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["action", "parameters"],
+                  "additionalProperties": false
+                },
+                "additionalProperties": false
+              },
+              "strategy": {
+                "type": "string",
+                "description": "strategy",
+                "additionalProperties": false
+              }
+            },
+            "required": ["strategy", "steps"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "top_p": 1,
       "response_format": {
         "type": "json_schema",
         "json_schema": {
@@ -977,6 +1374,17 @@
     }
   },
   "reasoning_medium": {
+    "api": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1,
+      "reasoning": {
+        "effort": "medium"
+      }
+    },
     "openai": {
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
@@ -1010,7 +1418,7 @@
     }
   },
   "seed_0": {
-    "openai": {
+    "api": {
       "seed": 90,
       "messages": [
         {
@@ -1022,6 +1430,21 @@
       "temperature": 0.2,
       "top_p": 0.5,
       "tools": null,
+      "reasoning": {
+        "effort": "high"
+      }
+    },
+    "openai": {
+      "seed": 90,
+      "messages": [
+        {
+          "role": "system",
+          "content": "hello"
+        }
+      ],
+      "model": "gemini-2.5-flash-lite",
+      "temperature": 0.2,
+      "top_p": 0.5,
       "reasoning": {
         "effort": "high"
       }
@@ -1046,6 +1469,67 @@
           "thinkingBudget": 4096
         }
       }
+    }
+  },
+
+  "image_0": {
+    "api": {
+      "messages": [
+        {
+          "role": "user",
+          "contents": [
+            {
+              "type": "text",
+              "text": "Can you describe what’s in the attached image?"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABaoAAAMcCAYAAACxWpI1AAABYGlDQ1BJQ0MgUHJvZmlsZQAAKJFtkL1Lw1A"
+              }
+            }
+          ]
+        }
+      ],
+      "model": "gpt-4.1-mini"
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Can you describe what’s in the attached image?"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABaoAAAMcCAYAAACxWpI1AAABYGlDQ1BJQ0MgUHJvZmlsZQAAKJFtkL1Lw1A"
+              }
+            }
+          ]
+        }
+      ],
+      "model": "gpt-4.1-mini"
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash",
+      "contents": [
+        {
+          "parts": [
+            { "text": "Can you describe what’s in the attached image?" },
+            {
+              "inline_data": {
+                "mime_type": "image/png",
+                "data": "iVBORw0KGgoAAAANSUhEUgAABaoAAAMcCAYAAACxWpI1AAABYGlDQ1BJQ0MgUHJvZmlsZQAAKJFtkL1Lw1A"
+              }
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {}
     }
   }
 }

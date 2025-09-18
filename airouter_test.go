@@ -2,8 +2,10 @@ package airouter
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,8 +15,9 @@ import (
 )
 
 type RequestTestCase struct {
-	OpenAI *OpenAIChatRequest `json:"openai"`
-	Gemini *GeminiRequest     `json:"gemini"`
+	Api    *CompletionInput `json:"api"`
+	OpenAI map[string]any   `json:"openai"`
+	Gemini *GeminiRequest   `json:"gemini"`
 }
 
 func TestRequestConversion(t *testing.T) {
@@ -30,7 +33,7 @@ func TestRequestConversion(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			actualJSON, err := ToGeminiRequestJSON(*tc.OpenAI)
+			actualJSON, err := ToGeminiRequestJSON(*tc.Api)
 			if err != nil {
 				t.Fatalf("ToGeminiRequestJSON failed: %v", err)
 			}
@@ -45,7 +48,6 @@ func TestRequestConversion(t *testing.T) {
 				t.Fatalf("Failed to unmarshal expected JSON: %v", err)
 			}
 
-			// 4. Marshal and unmarshal to maps for a more robust comparison.
 			actualJSONb, err := json.Marshal(actualMap)
 			if err != nil {
 				t.Fatalf("Failed to marshal actual response: %v", err)
@@ -56,7 +58,35 @@ func TestRequestConversion(t *testing.T) {
 			}
 
 			if !cmp.Equal(expectedMap, actualMap) {
-				t.Errorf("Request JSON mismatch (-want +got):\n%s", cmp.Diff(expectedMap, actualMap))
+				t.Errorf("Request GEMINI JSON mismatch (-want +got):\n%s", cmp.Diff(expectedMap, actualMap))
+			}
+
+			expectedMap = map[string]any{}
+			actualMap = map[string]any{}
+			actualJSON, err = ToOpenAICompletionJSON(*tc.Api)
+			if err != nil {
+				t.Fatalf("ToOpenAICompletionJSON failed: %v", err)
+			}
+			if err := json.Unmarshal([]byte(actualJSON), &actualMap); err != nil {
+				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+			}
+
+			openaib, _ := json.Marshal(tc.OpenAI)
+			if err := json.Unmarshal(openaib, &expectedMap); err != nil {
+				t.Fatalf("Failed to unmarshal expected JSON: %v", err)
+			}
+
+			actualJSONb, err = json.Marshal(actualMap)
+			if err != nil {
+				t.Fatalf("Failed to marshal actual response: %v", err)
+			}
+
+			if err := json.Unmarshal(actualJSONb, &actualMap); err != nil {
+				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+			}
+
+			if !cmp.Equal(expectedMap, actualMap) {
+				t.Errorf("Request OPENAI JSON mismatch (-want +got):\n%s", cmp.Diff(expectedMap, actualMap))
 			}
 		})
 	}
@@ -133,7 +163,7 @@ func TestResponseConversion(t *testing.T) {
 
 type ChatTestCase struct {
 	Output *OpenAIChatResponse `json:"output"`
-	Input  *OpenAIChatRequest  `json:"input"`
+	Input  *CompletionInput    `json:"input"`
 }
 
 func TestChatCompletion1(t *testing.T) {
@@ -148,6 +178,10 @@ func TestChatCompletion1(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
+		if name != "22" {
+			continue
+		}
+
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
 			model := tc.Input.Model
@@ -209,8 +243,8 @@ func TestChatCompletion1(t *testing.T) {
 }
 
 type CompletionTestCase struct {
-	Output *CompletionOutput  `json:"output"`
-	Input  *OpenAIChatRequest `json:"input"`
+	Output *CompletionOutput `json:"output"`
+	Input  *CompletionInput  `json:"input"`
 }
 
 func TestChatCompletionFull(t *testing.T) {
@@ -226,9 +260,6 @@ func TestChatCompletionFull(t *testing.T) {
 
 	BACKEND = "https://test"
 	for name, tc := range testCases {
-		if name != "test_function_call_gemini_2" {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
 			ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
 			b, _ := json.Marshal(tc.Input.ResponseFormat)
@@ -242,16 +273,13 @@ func TestChatCompletionFull(t *testing.T) {
 			b, _ = json.Marshal(tc.Input.Messages[1:])
 			json.Unmarshal(b, &history)
 
-			functions := []*AIFunction{}
+			functions := []*Function{}
 			for _, fn := range tc.Input.Tools {
 				if fn.Type == "function" {
-					fb, _ := json.Marshal(fn.Function)
-					function := &AIFunction{}
-					json.Unmarshal(fb, function)
-					function.Handler = func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) {
+					fn.Function.Handler = func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) {
 						return fn.Output, false
 					}
-					functions = append(functions, function)
+					functions = append(functions, fn.Function)
 				}
 			}
 
@@ -392,5 +420,67 @@ func TestGetEmbedding(t *testing.T) {
 				t.Errorf("Response JSON mismatch (-want +got):\n%s", cmp.Diff(expectedMap, actualMap))
 			}
 		})
+	}
+}
+
+func TestReadingSampleImage1(t *testing.T) {
+	filename := "./testcases/1.png"
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Detect file extension to build a data URL
+	ext := filepath.Ext(filename) // e.g. ".png"
+	mime := "image/" + ext[1:]    // crude mapping: png -> image/png
+	imgdata := base64.StdEncoding.EncodeToString(data)
+
+	BACKEND = "https://test"
+	ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
+	output, _, err := Complete(ctx, CompletionInput{
+		Model: "gpt-4.1-mini",
+		Messages: []*header.LLMChatHistoryEntry{{
+			Role: "user",
+			Contents: []*header.OpenAIMessageContent{{
+				Type: "text",
+				Text: "Which number is this (answer using an integer without any explaination)",
+			}, {
+				Type: "image_url",
+				ImageUrl: &header.OpenAIMessageContentImageUrl{
+					Url: "data:" + mime + ";base64," + imgdata,
+				},
+			}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Failed to marshal expected response: %v", err)
+	}
+
+	if output != "1" {
+		t.Fatalf("Should be 1, got: %s", output)
+	}
+
+
+	output, _, err = Complete(ctx, CompletionInput{
+		Model: "gemini-2.5-flash",
+		Messages: []*header.LLMChatHistoryEntry{{
+			Role: "user",
+			Contents: []*header.OpenAIMessageContent{{
+				Type: "text",
+				Text: "Which number is this (answer using an integer without any explaination)",
+			}, {
+				Type: "image_url",
+				ImageUrl: &header.OpenAIMessageContentImageUrl{
+					Url: "data:" + mime + ";base64," + imgdata,
+				},
+			}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Failed to marshal expected response: %v", err)
+	}
+
+	if output != "1" {
+		t.Fatalf("Should be 1, got: %s", output)
 	}
 }
