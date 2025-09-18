@@ -296,10 +296,11 @@ type OpenAITool struct {
 
 // Function mimics the structure of a function in an OpenAI Chat Completion request.
 type Function struct {
-	Name        string                                                                            `json:"name,omitempty"`
-	Description string                                                                            `json:"description,omitempty"`
-	Parameters  *header.JSONSchema                                                                `json:"parameters,omitempty"`
-	Handler     func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) `json:"-"` // "", true -> abandon completion, stop the flow immediately
+	Name        string             `json:"name,omitempty"`
+	Description string             `json:"description,omitempty"`
+	Parameters  *header.JSONSchema `json:"parameters,omitempty"`
+
+	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) `json:"-"` // "", true -> abandon completion, stop the flow immediately
 }
 
 // ResponseFormat specifies the format of the response.
@@ -1146,18 +1147,23 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		}
 
 		contentsi, has := msg["contents"]
-		if !has {
-			continue
-		}
-		arr, ok := contentsi.([]any)
-		if !ok {
-			continue
-		}
-		if len(arr) > 0 {
-			msg["content"] = contentsi
+		if has {
+			if arr, ok := contentsi.([]any); ok {
+				if len(arr) > 0 {
+					msg["content"] = contentsi
+				}
+			}
 			delete(msg, "contents")
 			changed = true
 		}
+		// tool
+		if _, has := msg["content"]; !has {
+			if _, hastool := msg["tool_calls"]; !hastool {
+				msg["content"] = "" // fill default, this is not valid 	{ "role": "tool", "tool_call_id": "call_DYllFTrudNWsPNg4jKhsdEaw" }
+				changed = true
+			}
+		}
+
 	}
 
 	if changed {

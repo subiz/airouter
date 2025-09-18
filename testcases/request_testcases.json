@@ -731,6 +731,95 @@
     }
   },
 
+  "tool_call_4": {
+    "api": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_DYllFTrudNWsPNg4jKhsdEaw",
+              "type": "function",
+              "function": {
+                "name": "system_collect_user_information",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "",
+          "tool_call_id": "call_DYllFTrudNWsPNg4jKhsdEaw"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0,
+      "top_p": 0
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        },
+        {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_DYllFTrudNWsPNg4jKhsdEaw",
+              "type": "function",
+              "function": {
+                "name": "system_collect_user_information",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "",
+          "tool_call_id": "call_DYllFTrudNWsPNg4jKhsdEaw"
+        }
+      ],
+      "model": "gpt-4o-mini"
+    },
+    "gemini": {
+      "contents": [
+        { "role": "user" },
+        {
+          "role": "model",
+          "parts": [
+            {
+              "functionCall": {
+                "args": {},
+                "name": "system_collect_user_information"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "functionResponse": {
+                "name": "system_collect_user_information",
+                "response": { "text": "" }
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {},
+      "model": "models/gemini-2.0-flash",
+      "systemInstruction": { "parts": [{ "text": "Hi" }] }
+    }
+  },
   "test_6_conversation_history": {
     "api": {
       "messages": [

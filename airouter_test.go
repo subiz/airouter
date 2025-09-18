@@ -30,7 +30,6 @@ func TestRequestConversion(t *testing.T) {
 	if err := json.Unmarshal(file, &testCases); err != nil {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			actualJSON, err := ToGeminiRequestJSON(*tc.Api)
