@@ -643,62 +643,7 @@ type CompletionInput struct {
 	Tools       []OpenAITool         `json:"tools,omitempty"`
 }
 
-func ChatComplete(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*Function, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
-	instruction = CleanString(instruction)
-	cophistoris := append([]*header.LLMChatHistoryEntry{{Role: "system", Content: instruction}}, histories...)
-	tools := []OpenAITool{}
-	for _, fun := range functions {
-		tools = append(tools, OpenAITool{Type: "function", Function: fun})
-	}
-	var rf *ResponseFormat
-	if responseformat != nil {
-		rf = &ResponseFormat{
-			Type:       "json_schema",
-			JSONSchema: responseformat,
-		}
-	}
-	return _chatComplete(ctx, CompletionInput{
-		Model:          model,
-		Messages:       cophistoris,
-		ResponseFormat: rf,
-		ToolChoice:     toolchoice,
-		Tools:          tools,
-		TopP:           1,
-		Temperature:    0,
-	})
-}
-
 func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
-	return _chatComplete(ctx, input)
-}
-
-func ChatCompleteQuiet(ctx context.Context, model string, instruction string, histories []*header.LLMChatHistoryEntry, functions []*Function, responseformat *header.LLMResponseJSONSchemaFormat, toolchoice string) (string, CompletionOutput, error) {
-	instruction = CleanString(instruction)
-	cophistoris := append([]*header.LLMChatHistoryEntry{{Role: "system", Content: instruction}}, histories...)
-	tools := []OpenAITool{}
-	for _, fun := range functions {
-		tools = append(tools, OpenAITool{Type: "function", Function: fun})
-	}
-	var rf *ResponseFormat
-	if responseformat != nil {
-		rf = &ResponseFormat{
-			Type:       "json_schema",
-			JSONSchema: responseformat,
-		}
-	}
-	return _chatComplete(ctx, CompletionInput{
-		Model:          model,
-		Messages:       cophistoris,
-		ResponseFormat: rf,
-		ToolChoice:     toolchoice,
-		Tools:          tools,
-		NoLog:          true,
-		TopP:           1,
-		Temperature:    0,
-	})
-}
-
-func _chatComplete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}

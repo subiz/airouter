@@ -272,17 +272,15 @@ func TestChatCompletionFull(t *testing.T) {
 			b, _ = json.Marshal(tc.Input.Messages[1:])
 			json.Unmarshal(b, &history)
 
-			functions := []*Function{}
 			for _, fn := range tc.Input.Tools {
 				if fn.Type == "function" {
 					fn.Function.Handler = func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) {
 						return fn.Output, false
 					}
-					functions = append(functions, fn.Function)
 				}
 			}
 
-			_, out, err := ChatComplete(ctx, tc.Input.Model, tc.Input.Messages[0].GetContent(), history, functions, resf, tc.Input.ToolChoice)
+			_, out, err := Complete(ctx, *tc.Input)
 			if err != nil {
 				t.Fatalf("Failed to marshal expected response: %v", err)
 			}
@@ -458,7 +456,6 @@ func TestReadingSampleImage1(t *testing.T) {
 	if output != "1" {
 		t.Fatalf("Should be 1, got: %s", output)
 	}
-
 
 	output, _, err = Complete(ctx, CompletionInput{
 		Model: "gemini-2.5-flash",
