@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -176,6 +175,7 @@ func TestChatCompletion1(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
 	for name, tc := range testCases {
 		if name != "22" {
 			continue
@@ -183,14 +183,8 @@ func TestChatCompletion1(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			model := tc.Input.Model
-			apikey := os.Getenv("OPENAI_API_KEY")
-			if strings.HasPrefix(model, "gemini") {
-				apikey = os.Getenv("GEMINI_API_KEY")
-			}
-
 			reqb, _ := json.Marshal(tc.Input)
-			out, err := ChatCompleteAPI(ctx, apikey, reqb)
+			out, err := ChatCompleteAPI(ctx, reqb)
 			if err != nil {
 				t.Fatalf("Failed to unmarshal test cases: %v", err)
 			}
@@ -258,6 +252,7 @@ func TestChatCompletionFull(t *testing.T) {
 	}
 
 	BACKEND = "https://test"
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
@@ -379,20 +374,11 @@ func TestGetEmbedding(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
-	openai_apikey := os.Getenv("OPENAI_API_KEY")
-	gemini_apikey := os.Getenv("GEMINI_API_KEY")
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			var output OpenAIEmbeddingResponse
-			var err error
-			if strings.HasPrefix(tc.Model, "text") {
-				output, err = GetEmbeddingAPI(ctx, openai_apikey, tc.Model, tc.Input)
-			}
-
-			if strings.HasPrefix(tc.Model, "gemini") {
-				output, err = GetEmbeddingAPI(ctx, gemini_apikey, tc.Model, tc.Input)
-			}
+			output, err := GetEmbeddingAPI(ctx, tc.Model, tc.Input)
 
 			if err != nil {
 				t.Fatalf("Failed to unmarshal test cases: %v", err)
@@ -433,6 +419,7 @@ func TestReadingSampleImage1(t *testing.T) {
 	imgdata := base64.StdEncoding.EncodeToString(data)
 
 	BACKEND = "https://test"
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
 	ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
 	output, _, err := Complete(ctx, CompletionInput{
 		Model: "gpt-4.1-mini",

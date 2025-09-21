@@ -368,7 +368,7 @@ type OpenAIChatResponse struct {
 	ServiceTier string         `json:"service_tier,omitempty"`
 }
 
-func ChatCompleteAPI(ctx context.Context, apikey string, payload []byte) (OpenAIChatResponse, error) {
+func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, error) {
 	var output []byte
 	var err error
 
@@ -377,8 +377,10 @@ func ChatCompleteAPI(ctx context.Context, apikey string, payload []byte) (OpenAI
 	model := request.Model
 
 	if strings.HasPrefix(model, "gemini") {
+		apikey := _geminiapikey
 		output, err = chatCompleteGemini(ctx, apikey, request)
 	} else {
+		apikey := _openaiapikey
 		output, err = chatCompleteChatGPT(ctx, apikey, request)
 	}
 
@@ -395,16 +397,18 @@ func ChatCompleteAPI(ctx context.Context, apikey string, payload []byte) (OpenAI
 	return response, err
 }
 
-func GetEmbeddingAPI(ctx context.Context, apikey, model, text string) (OpenAIEmbeddingResponse, error) {
+func GetEmbeddingAPI(ctx context.Context, model, text string) (OpenAIEmbeddingResponse, error) {
 	text = strings.TrimSpace(text)
 	if len(text) == 0 {
 		return OpenAIEmbeddingResponse{}, nil
 	}
 	if model == "gemini-embedding-001" {
+		apikey := _geminiapikey
 		return getGeminiEmbedding(ctx, apikey, model, text)
 	}
 
 	if model == Text_embedding_3_small || model == Text_embedding_3_large || model == Text_embedding_ada_002 {
+		apikey := _openaiapikey
 		return getOpenAIEmbedding(ctx, apikey, model, text)
 	}
 	return OpenAIEmbeddingResponse{
@@ -557,13 +561,7 @@ func FakeBackend(rawURL string, input []byte) (int, []byte) {
 
 	if parsedURL.Host == "test" && parsedURL.Path == "/embeddings" {
 		model := parsedURL.Query().Get("model")
-		var apikey string
-		if strings.HasPrefix(model, "gemini") {
-			apikey = os.Getenv("GEMINI_API_KEY")
-		} else {
-			apikey = os.Getenv("OPENAI_API_KEY")
-		}
-		out, err := GetEmbeddingAPI(context.Background(), apikey, model, string(input))
+		out, err := GetEmbeddingAPI(context.Background(), model, string(input))
 		if err != nil {
 			return 500, []byte(err.Error())
 		}
@@ -572,16 +570,9 @@ func FakeBackend(rawURL string, input []byte) (int, []byte) {
 	}
 
 	if parsedURL.Host == "test" && parsedURL.Path == "/completions" {
-		var apikey string
 		request := CompletionInput{}
 		json.Unmarshal(input, &request)
-		model := request.Model
-		if strings.HasPrefix(model, "gemini") {
-			apikey = os.Getenv("GEMINI_API_KEY")
-		} else {
-			apikey = os.Getenv("OPENAI_API_KEY")
-		}
-		out, err := ChatCompleteAPI(context.Background(), apikey, input)
+		out, err := ChatCompleteAPI(context.Background(), input)
 		if err != nil {
 			return 500, nil
 		}
@@ -615,9 +606,16 @@ type CompletionOutput struct {
 }
 
 var _apikey string // subiz api key
+var _openaiapikey string
+var _geminiapikey string
 
 func Init(apikey string) {
 	_apikey = apikey
+}
+
+func InitAPI(geminiKey, openaiKey string) {
+	_openaiapikey = openaiKey
+	_geminiapikey = geminiKey
 }
 
 type TotalCost struct {
