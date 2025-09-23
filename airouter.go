@@ -1127,6 +1127,7 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	}
 
 	if changed {
+		delete(m, "-")
 		b, _ = json.Marshal(m)
 	}
 	return b, nil
