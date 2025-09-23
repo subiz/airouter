@@ -1106,6 +1106,14 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 			return b, nil
 		}
 
+		if rolei, _ := msg["role"]; rolei != nil {
+			role, _ := rolei.(string)
+			if role != strings.TrimSpace(strings.ToLower(role)) {
+				msg["role"] = strings.TrimSpace(strings.ToLower(role))
+				changed = true
+			}
+		}
+
 		contentsi, has := msg["contents"]
 		if has {
 			if arr, ok := contentsi.([]any); ok {
@@ -1321,7 +1329,8 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 
 	systemmsgs := []string{}
 	for _, msg := range messages {
-		switch msg.Role {
+		role := strings.ToLower(strings.TrimSpace(msg.Role))
+		switch role {
 		case "system":
 			if msg.Content != "" {
 				systemmsgs = append(systemmsgs, msg.Content)

@@ -1638,6 +1638,55 @@
     }
   },
 
+  "role_0": {
+    "api": {
+      "messages": [
+        {
+          "role": " System",
+          "content": "hello"
+        },
+        {
+          "role": "User",
+          "content": "hi"
+        }
+      ],
+      "model": "gemini-2.5-flash-lite"
+    },
+    "openai": {
+      "model": "gemini-2.5-flash-lite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "hello"
+        },
+        {
+          "role": "user",
+          "content": "hi"
+        }
+      ]
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash-lite",
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      },
+      "generationConfig": {},
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "hi"
+            }
+          ],
+          "role": "user"
+        }
+      ]
+    }
+  },
   "image_0": {
     "api": {
       "messages": [
