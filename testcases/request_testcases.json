@@ -1,4 +1,81 @@
 {
+  "test_instruct_0": {
+    "api": {
+      "instruct": "You are a calculator. What is 1+1",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
+    }
+  },
+  "test_instruct_1": {
+    "api": {
+      "instruct": "You are a calculator",
+      "messages": [{ "role": "user", "content": "What is 1+1" }],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator" },
+        { "role": "user", "content": "What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "You are a calculator"
+          }
+        ]
+      },
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
+    }
+  },
   "test_0_no_message": {
     "api": {
       "messages": [

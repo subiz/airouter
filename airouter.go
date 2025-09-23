@@ -665,10 +665,6 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		msg.Created = 0
 		messages = append(messages, msg)
 	}
-
-	if input.Instruct != "" {
-		messages = append([]*header.LLMChatHistoryEntry{{Role: "system", Content: input.Instruct}}, messages...)
-	}
 	input.Messages = messages
 
 	functioncalled := false
@@ -1034,11 +1030,10 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		return nil, err
 	}
 
-	messagesi, has := m["messages"]
-	if !has {
-		return b, nil
-	}
 	changed := false
+	if _, hasDash := m["-"]; hasDash {
+		changed = true
+	}
 
 	// tools
 	tools := []any{}
@@ -1095,6 +1090,11 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		}
 	}
 
+	messagesi := m["messages"]
+	if messagesi == nil {
+		messagesi = []any{}
+	}
+
 	messages, ok := messagesi.([]any)
 	if !ok {
 		return b, nil
@@ -1123,10 +1123,17 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 				changed = true
 			}
 		}
+	}
 
+	if req.Instruct != "" {
+		messages = append([]any{&header.LLMChatHistoryEntry{Role: "system", Content: req.Instruct}}, messages...)
+		m["messages"] = messages
+		changed = true
 	}
 
 	if changed {
+		delete(m, "-")
+		delete(m, "instruct")
 		b, _ = json.Marshal(m)
 	}
 	return b, nil
@@ -1307,8 +1314,13 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 	var contents []*GeminiContent
 	toolCallsByID := make(map[string]*header.LLMToolCall)
 
+	messages := req.Messages
+	if req.Instruct != "" {
+		messages = append([]*header.LLMChatHistoryEntry{{Role: "system", Content: req.Instruct}}, messages...)
+	}
+
 	systemmsgs := []string{}
-	for _, msg := range req.Messages {
+	for _, msg := range messages {
 		switch msg.Role {
 		case "system":
 			if msg.Content != "" {
