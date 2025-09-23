@@ -20,6 +20,7 @@ import (
 
 	"github.com/subiz/header"
 	"github.com/subiz/log"
+	"google.golang.org/protobuf/proto"
 )
 
 var BACKEND = "https://api.subiz.com.vn/4.1/ai"
@@ -45,6 +46,7 @@ const Text_embedding_ada_002 = "text-embedding-ada-002"
 
 const Gemini_embedding_001 = "gemini-embedding-001"
 
+// ToModel converts model to the closest standardized model
 func ToModel(model string) string {
 	if model == "gpt-4o-mini" || strings.HasPrefix(model, "gpt-4o-mini-2") {
 		return Gpt_4o_mini
@@ -609,10 +611,12 @@ var _apikey string // subiz api key
 var _openaiapikey string
 var _geminiapikey string
 
+// Init setups the Subiz API Key client. Only client should call this
 func Init(apikey string) {
 	_apikey = apikey
 }
 
+// InitAPI setups API Keys for the server. Only server should call this
 func InitAPI(geminiKey, openaiKey string) {
 	_openaiapikey = openaiKey
 	_geminiapikey = geminiKey
@@ -631,14 +635,14 @@ type CompletionInput struct {
 	Seed           int                           `json:"seed,omitempty"`
 	Model          string                        `json:"model,omitempty"`
 	NoLog          bool                          `json:"-,omitempty"` // disable log
+	Instruct       string                        `json:"instruct,omitempty"`
 	Messages       []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
 	ResponseFormat *ResponseFormat               `json:"response_format,omitempty"`
 	ToolChoice     string                        `json:"tool_choice,omitempty"`
-	// Functions      []*AIFunction                 `json:"-,omitempty"`
-	Reasoning   *CompletionReasoning `json:"reasoning,omitempty"`
-	Temperature float32              `json:"temperature,omitempty"`
-	TopP        float32              `json:"top_p,omitempty"`
-	Tools       []OpenAITool         `json:"tools,omitempty"`
+	Reasoning      *CompletionReasoning          `json:"reasoning,omitempty"`
+	Temperature    float32                       `json:"temperature,omitempty"`
+	TopP           float32                       `json:"top_p,omitempty"`
+	Tools          []OpenAITool                  `json:"tools,omitempty"`
 }
 
 func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
@@ -653,6 +657,19 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			fnM[fn.Function.Name] = fn.Function
 		}
 	}
+
+	messages := []*header.LLMChatHistoryEntry{}
+	for _, msg := range input.Messages {
+		msg = proto.Clone(msg).(*header.LLMChatHistoryEntry)
+		msg.Id = ""
+		msg.Created = 0
+		messages = append(messages, msg)
+	}
+
+	if input.Instruct != "" {
+		messages = append([]*header.LLMChatHistoryEntry{{Role: "system", Content: input.Instruct}}, messages...)
+	}
+	input.Messages = messages
 
 	functioncalled := false
 	var requestbody []byte
@@ -683,7 +700,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 
 		url := BACKEND + "/completions?" + q.Encode()
 		requestbody, _ = json.Marshal(input)
-		md5sum := GetMD5Hash(url + string(requestbody))
+		md5sum := GetMD5Hash(accid + "." + string(requestbody))
 		cachepath := "./.cache/cc-" + md5sum
 		cache, err := os.ReadFile(cachepath)
 		if err != nil {
@@ -701,7 +718,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			if len(cache) == 0 {
 				cachehit = "MISS"
 			}
-			log.Info(accid, log.Stack(), "LLM", cachehit, convoid, string(requestbody))
+			log.Info(accid, log.Stack(), "LLM", cachehit, convoid, md5sum, string(requestbody))
 		}
 
 		if len(cache) > 0 {
