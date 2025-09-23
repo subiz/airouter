@@ -377,6 +377,9 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 	request := CompletionInput{}
 	json.Unmarshal(payload, &request)
 	model := request.Model
+	if model == "" {
+		model = Gpt_4o_mini // default
+	}
 
 	if strings.HasPrefix(model, "gemini") {
 		apikey := _geminiapikey
