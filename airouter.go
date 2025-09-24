@@ -1111,8 +1111,13 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 
 		if rolei, _ := msg["role"]; rolei != nil {
 			role, _ := rolei.(string)
-			if role != strings.TrimSpace(strings.ToLower(role)) {
-				msg["role"] = strings.TrimSpace(strings.ToLower(role))
+			newrole := role
+			newrole = strings.TrimSpace(strings.ToLower(role))
+			if newrole == "agent" || newrole == "bot" {
+				newrole = "assistant"
+			}
+			msg["role"] = newrole
+			if newrole != role {
 				changed = true
 			}
 		}
@@ -1373,7 +1378,7 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 			}
 			contents = append(contents, gemContent)
 
-		case "assistant":
+		case "assistant", "agent":
 			if len(msg.ToolCalls) > 0 {
 				var parts []*GeminiPart
 				for _, tc := range msg.ToolCalls {

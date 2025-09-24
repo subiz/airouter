@@ -1687,6 +1687,42 @@
       ]
     }
   },
+  "role_1": {
+    "api": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" },
+        { "role": "user", "content": "ok1" },
+        { "role": "agent", "content": "You are a calculator. What is 2+2" },
+        { "role": "user", "content": "ok2" }
+      ],
+      "model": "gpt-4o-mini"
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" },
+        { "role": "user", "content": "ok1" },
+        { "role": "assistant", "content": "You are a calculator. What is 2+2" },
+        { "role": "user", "content": "ok2" }
+      ],
+      "model": "gpt-4o-mini"
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "systemInstruction": {
+        "parts": [{ "text": "You are a calculator. What is 1+1" }]
+      },
+      "contents": [
+        { "parts": [{ "text": "ok1" }], "role": "user" },
+        {
+          "parts": [{ "text": "You are a calculator. What is 2+2" }],
+          "role": "model"
+        },
+        { "parts": [{ "text": "ok2" }], "role": "user" }
+      ],
+      "generationConfig": {},
+      "model": "models/gemini-2.0-flash"
+    }
+  },
   "image_0": {
     "api": {
       "messages": [
