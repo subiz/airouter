@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -465,5 +469,63 @@ func TestReadingSampleImage1(t *testing.T) {
 
 	if output != "1" {
 		t.Fatalf("Should be 1, got: %s", output)
+	}
+}
+
+type RerankTestCase struct {
+	Output *RerankOutput `json:"output"`
+	Input  *RerankInput  `json:"input"`
+}
+
+func TestRerank(t *testing.T) {
+	// Step 1: Run the command
+	out, err := exec.Command("gcloud", "auth", "print-access-token").Output()
+	if err != nil {
+		fmt.Println("Error running gcloud:", err)
+		return
+	}
+
+	// Step 2: Trim newline
+	token := strings.TrimSpace(string(out))
+
+	// Step 3: Set env var
+	os.Setenv("GEMINI_RERANK_TOKEN", token)
+
+	// Read the test cases from the JSON file
+	file, err := os.ReadFile("./testcases/rerank_testcase.json")
+	if err != nil {
+		t.Fatalf("Failed to read test cases file: %v", err)
+	}
+
+	var testCases map[string]RerankTestCase
+	if err := json.Unmarshal(file, &testCases); err != nil {
+		t.Fatalf("Failed to unmarshal test cases: %v", err)
+	}
+
+	BACKEND = "https://test"
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			output, err := Rerank(ctx, tc.Input.Model, tc.Input.Query, tc.Input.Records)
+			if err != nil {
+				t.Fatalf("Failed to rerank: %v", err)
+			}
+
+			if len(output.Records) != len(tc.Output.Records) {
+				t.Fatalf("Expected %d records, got %d", len(tc.Output.Records), len(output.Records))
+			}
+
+			for i, gotRecord := range output.Records {
+				expectedRecord := tc.Output.Records[i]
+				if gotRecord.Id != expectedRecord.Id {
+					t.Errorf("Record at index %d: expected id %s, got %s", i, expectedRecord.Id, gotRecord.Id)
+				}
+				// Using a tolerance for float comparison
+				if math.Abs(float64(gotRecord.Score-expectedRecord.Score)) > 0.001 {
+					t.Errorf("For record id %s, expected score %f, got %f", gotRecord.Id, expectedRecord.Score, gotRecord.Score)
+				}
+			}
+		})
 	}
 }

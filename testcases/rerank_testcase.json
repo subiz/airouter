@@ -1,0 +1,46 @@
+{
+  "test_0": {
+    "input": {
+      "model": "semantic-ranker-default@latest",
+      "query": "Thời tiết hôm nay thế nào?",
+      "records": [
+        {
+          "id": "1",
+          "title": "Dự báo thời tiết của trung tâm 1",
+          "content": "Tại Hà Nội, trời nắng to"
+        },
+        {
+          "id": "2",
+          "title": "Dự báo thời tiết của trung tâm 2",
+          "content": "Tại TP HCM, bầu trời quang đãng"
+        },
+        {
+          "id": "3",
+          "title": "Ngày",
+          "content": "Ngày hôm nay là thứ 3"
+        },
+        {
+          "id": "4",
+          "title": "Con sói",
+          "content": "Con sói sẽ hoá thành người trong ngày trăng tròn"
+        },
+        {
+          "id": "5",
+          "title": "Điều kiện",
+          "content": "Giao thông hôm nay bị tắc nghẽn cục bộ tại khu vực Hà Nội"
+        }
+      ]
+    },
+    "output": {
+      "records": [
+        { "id": "2", "score": 0.5823 },
+        { "id": "1", "score": 0.5687 },
+        { "id": "5", "score": 0.1951 },
+        { "id": "3", "score": 0.1819 },
+        { "id": "4", "score": 0.03 }
+      ],
+      "duration_ms": 396,
+      "kfpv_cost_usd": 0
+    }
+  }
+}

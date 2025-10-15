@@ -585,6 +585,16 @@ func FakeBackend(rawURL string, input []byte) (int, []byte) {
 		return 200, b
 	}
 
+	if parsedURL.Host == "test" && parsedURL.Path == "/rerankings" {
+		token := os.Getenv("GEMINI_RERANK_TOKEN")                 // export GEMINI_RERANK_TOKEN=`gcloud auth print-access-token`
+		out, err := RerankAPI(context.Background(), token, input) // token will be from env
+		if err != nil {
+			return 500, []byte(err.Error())
+		}
+		b, _ := json.Marshal(out)
+		return 200, b
+	}
+
 	return 404, []byte("not found " + rawURL)
 }
 
@@ -1614,7 +1624,7 @@ func toOpenAIChatResponse(res *GeminiAPIResponse) (*OpenAIChatResponse, error) {
 
 	return &OpenAIChatResponse{
 		ID:      responseID,
-		Created: time.Now().Unix(),
+		Created: time.Now().UnixMilli(),
 		Object:  "chat.completion",
 		Model:   res.ModelVersion,
 		Choices: []OpenAIChoice{choice},
@@ -1756,7 +1766,7 @@ func getGeminiEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 
 type RerankingResponse struct {
 	Records []*RerankRecord `json:"records,omitempty"`
-	Created int64           `json:created,omitempty"` // sec
+	Created int64           `json:"created,omitempty"` // sec
 	Object  string          `json:"object,omitempty"`
 	Model   string          `json:"model,omitempty"`
 	Usage   *Usage          `json:"usage,omitempty"`
@@ -1765,7 +1775,7 @@ type RerankingResponse struct {
 
 type RerankOutput struct {
 	Records     []*RerankRecord `json:"records,omitempty"`
-	Created     int64           `json:"created"`
+	Created     int64           `json:"created,omitempty"`
 	DurationMs  int64           `json:"duration_ms"`
 	KfpvCostUSD int64           `json:"kfpv_cost_usd"` // 1 usd -> 1000_000_000 kfpvusd
 }
@@ -1831,8 +1841,18 @@ func Rerank(ctx context.Context, model, query string, records []*RerankRecord) (
 
 	q.Set("model", model)
 
-	url := BACKEND + "/rankings?" + q.Encode()
-	md5sum := GetMD5Hash(query)
+	url := BACKEND + "/rerankings?" + q.Encode()
+	rerankInput := RerankInput{
+		Model:   model,
+		Query:   query,
+		Records: records,
+	}
+	payload, err := json.Marshal(rerankInput)
+	if err != nil {
+		return RerankOutput{}, err
+	}
+	md5sum := GetMD5Hash(string(payload))
+
 	cachepath := "./.cache/rk-" + md5sum
 	cache, err := os.ReadFile(cachepath)
 	if err != nil {
@@ -1852,12 +1872,12 @@ func Rerank(ctx context.Context, model, query string, records []*RerankRecord) (
 		}
 	}
 
-	resp, resoutput, err := sendPOST(url, _apikey, []byte(query))
+	resp, resoutput, err := sendPOST(url, _apikey, payload)
 	if err != nil {
 		return RerankOutput{}, log.EProvider(err, "gemini", "reranking")
 	}
 	if resp.StatusCode != 200 {
-		return RerankOutput{}, log.EProvider(nil, "gemini", "reranking", log.M{"status": resp.StatusCode, "_payload": resoutput})
+		return RerankOutput{}, log.EProvider(nil, "gemini", "reranking", log.M{"status": resp.StatusCode, "_payload": resoutput, "url": url})
 	}
 
 	json.Unmarshal(resoutput, response)
@@ -1865,6 +1885,7 @@ func Rerank(ctx context.Context, model, query string, records []*RerankRecord) (
 	pricef, _ := strconv.ParseFloat(pricestr, 64)
 
 	rerankoutput := RerankOutput{
+		Records:     response.Records,
 		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
 		Created:     start.UnixMilli(),
 		KfpvCostUSD: int64(pricef * 1000),
@@ -1900,7 +1921,7 @@ func rerankingGemini(ctx context.Context, token string, request RerankInput) (*R
 
 	if len(query) == 0 || len(records) == 0 {
 		return &RerankingResponse{
-			Created: time.Now().Unix(),
+			Created: time.Now().UnixMilli(),
 			Object:  "reranking",
 			Model:   request.Model,
 		}, nil
@@ -1955,7 +1976,7 @@ func toOpenAIRerankResponse(res *GeminiRankingResponse, model string) (*Rerankin
 			param = res.Error.Details[0].FieldViolations[0].Field
 		}
 		return &RerankingResponse{
-			Created: time.Now().Unix(),
+			Created: time.Now().UnixMilli(),
 			Model:   model,
 			Object:  "reranking",
 			Error: &OpenAIError{
@@ -1980,7 +2001,7 @@ func toOpenAIRerankResponse(res *GeminiRankingResponse, model string) (*Rerankin
 	}
 	return &RerankingResponse{
 		Model:   model,
-		Created: time.Now().Unix(),
+		Created: time.Now().UnixMilli(),
 		Object:  "reranking",
 		Records: records,
 	}, nil
