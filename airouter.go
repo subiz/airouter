@@ -1756,10 +1756,10 @@ func getGeminiEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 
 type RerankingResponse struct {
 	Records []*RerankRecord `json:"records,omitempty"`
-	Created int64           `json:created"` // sec
-	Object  string          `json:"object"`
-	Model   string          `json:"model"`
-	Usage   *Usage          `json:"usage"`
+	Created int64           `json:created,omitempty"` // sec
+	Object  string          `json:"object,omitempty"`
+	Model   string          `json:"model,omitempty"`
+	Usage   *Usage          `json:"usage,omitempty"`
 	Error   *OpenAIError    `json:"error,omitempty"`
 }
 
@@ -1771,7 +1771,7 @@ type RerankOutput struct {
 }
 
 type GeminiRerankRecord struct {
-	Id      int     `json:"id,omitempty"`
+	Id      string  `json:"id,omitempty"`
 	Title   string  `json:"title,omitempty"`
 	Content string  `json:"content,omitempty"`
 	Score   float32 `json:"score,omitempty"`
@@ -1783,7 +1783,7 @@ type GeminiRankingResponse struct {
 }
 
 type RerankRecord struct {
-	Id      int     `json:"id,omitempty"`
+	Id      string  `json:"id,omitempty"`
 	Title   string  `json:"title,omitempty"`
 	Content string  `json:"content,omitempty"`
 	Score   float32 `json:"score,omitempty"`
@@ -1791,6 +1791,7 @@ type RerankRecord struct {
 
 type RerankInput struct {
 	Seed    int             `json:"seed,omitempty"`
+	TopN    int             `json:"top_n,omitempty"`
 	Model   string          `json:"model,omitempty"`
 	Query   string          `json:"query,omitempty"`
 	Records []*RerankRecord `json:"records,omitempty"`
@@ -1894,12 +1895,30 @@ func RerankAPI(ctx context.Context, token string, payload []byte) (RerankingResp
 }
 
 func rerankingGemini(ctx context.Context, token string, request RerankInput) (*RerankingResponse, error) {
+	records := request.Records
+	query := header.Norm(request.Query, 1000)
+
+	if len(query) == 0 || len(records) == 0 {
+		return &RerankingResponse{
+			Created: time.Now().Unix(),
+			Object:  "reranking",
+			Model:   request.Model,
+		}, nil
+	}
+
+	topn := request.TopN
+	if topn <= 0 {
+		topn = len(request.Records)
+	}
+
 	model := request.Model
 	var err error
 	requestb, err := json.Marshal(map[string]any{
-		"model":   model,
-		"query":   request.Query,
-		"records": request.Records,
+		"model":                         model,
+		"query":                         query,
+		"records":                       records,
+		"ignoreRecordDetailsInResponse": true,
+		"topN":                          topn,
 	})
 	if err != nil {
 		return nil, err
@@ -1924,17 +1943,21 @@ func rerankingGemini(ctx context.Context, token string, request RerankInput) (*R
 	output := buf.Bytes()
 	gemres := &GeminiRankingResponse{}
 	json.Unmarshal(output, gemres)
-	return toOpenAIRerankResponse(gemres)
+
+	return toOpenAIRerankResponse(gemres, model)
 }
 
 // toOpenAIChatResponse converts a Gemini response to an OpenAI-compatible chat response.
-func toOpenAIRerankResponse(res *GeminiRankingResponse) (*RerankingResponse, error) {
+func toOpenAIRerankResponse(res *GeminiRankingResponse, model string) (*RerankingResponse, error) {
 	if res.Error != nil {
 		param := ""
 		if len(res.Error.Details) > 0 && len(res.Error.Details[0].FieldViolations) > 0 {
 			param = res.Error.Details[0].FieldViolations[0].Field
 		}
 		return &RerankingResponse{
+			Created: time.Now().Unix(),
+			Model:   model,
+			Object:  "reranking",
 			Error: &OpenAIError{
 				Message: res.Error.Message,
 				Type:    "invalid_request_error",
@@ -1956,6 +1979,7 @@ func toOpenAIRerankResponse(res *GeminiRankingResponse) (*RerankingResponse, err
 		})
 	}
 	return &RerankingResponse{
+		Model:   model,
 		Created: time.Now().Unix(),
 		Object:  "reranking",
 		Records: records,

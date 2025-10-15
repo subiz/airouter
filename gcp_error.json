@@ -1,4 +1,11 @@
 {
+  "sample2": {
+    "error": {
+      "code": 400,
+      "message": "RankRequest.records(0).id() is empty.",
+      "status": "INVALID_ARGUMENT"
+    }
+  },
   "sample1": {
     "error": {
       "code": 401,
