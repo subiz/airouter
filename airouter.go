@@ -1753,3 +1753,211 @@ func getGeminiEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 	out.Data[0].Embedding = values
 	return out, nil
 }
+
+type RerankingResponse struct {
+	Records []*RerankRecord `json:"records,omitempty"`
+	Created int64           `json:created"` // sec
+	Object  string          `json:"object"`
+	Model   string          `json:"model"`
+	Usage   *Usage          `json:"usage"`
+	Error   *OpenAIError    `json:"error,omitempty"`
+}
+
+type RerankOutput struct {
+	Records     []*RerankRecord `json:"records,omitempty"`
+	Created     int64           `json:"created"`
+	DurationMs  int64           `json:"duration_ms"`
+	KfpvCostUSD int64           `json:"kfpv_cost_usd"` // 1 usd -> 1000_000_000 kfpvusd
+}
+
+type GeminiRerankRecord struct {
+	Id      int     `json:"id,omitempty"`
+	Title   string  `json:"title,omitempty"`
+	Content string  `json:"content,omitempty"`
+	Score   float32 `json:"score,omitempty"`
+}
+
+type GeminiRankingResponse struct {
+	Records []*GeminiRerankRecord `json:"records,omitempty"`
+	Error   *GeminiError          `json:"error"`
+}
+
+type RerankRecord struct {
+	Id      int     `json:"id,omitempty"`
+	Title   string  `json:"title,omitempty"`
+	Content string  `json:"content,omitempty"`
+	Score   float32 `json:"score,omitempty"`
+}
+
+type RerankInput struct {
+	Seed    int             `json:"seed,omitempty"`
+	Model   string          `json:"model,omitempty"`
+	Query   string          `json:"query,omitempty"`
+	Records []*RerankRecord `json:"records,omitempty"`
+}
+
+func Rerank(ctx context.Context, model, query string, records []*RerankRecord) (RerankOutput, error) {
+	query = header.Norm(query, 1000)
+	defer header.KLock(query)()
+
+	if len(query) == 0 || len(records) == 0 {
+		return RerankOutput{}, nil
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	start := time.Now()
+	response := &RerankingResponse{}
+	// Retrieve the value and assert it as a string
+	accid, _ := ctx.Value("account_id").(string)
+
+	// send to subiz server
+	q := neturl.Values{}
+	if accid != "" {
+		q.Set("account_id", accid)
+	}
+	if id, _ := ctx.Value("conversation_id").(string); id != "" {
+		q.Set("x-conversation-id", id)
+	}
+	if id, _ := ctx.Value("trace_id").(string); id != "" {
+		q.Set("x-trace-id", id)
+	}
+	if id, _ := ctx.Value("purpose").(string); id != "" {
+		q.Set("x-purpose", id)
+	}
+
+	q.Set("model", model)
+
+	url := BACKEND + "/rankings?" + q.Encode()
+	md5sum := GetMD5Hash(query)
+	cachepath := "./.cache/rk-" + md5sum
+	cache, err := os.ReadFile(cachepath)
+	if err != nil {
+		if _, err := os.Stat("./.cache"); os.IsNotExist(err) {
+			os.MkdirAll("./.cache", os.ModePerm)
+		}
+		_, err := os.Stat(cachepath)
+		if err == nil || !os.IsNotExist(err) {
+			log.Err(accid, err, "CANNOT CACHE")
+		}
+	}
+
+	if len(cache) > 0 {
+		output := RerankOutput{}
+		if err := json.Unmarshal(cache, &output); err == nil {
+			return output, nil
+		}
+	}
+
+	resp, resoutput, err := sendPOST(url, _apikey, []byte(query))
+	if err != nil {
+		return RerankOutput{}, log.EProvider(err, "gemini", "reranking")
+	}
+	if resp.StatusCode != 200 {
+		return RerankOutput{}, log.EProvider(nil, "gemini", "reranking", log.M{"status": resp.StatusCode, "_payload": resoutput})
+	}
+
+	json.Unmarshal(resoutput, response)
+	pricestr := resp.Header.Get("X-Cost-USD") // fpv
+	pricef, _ := strconv.ParseFloat(pricestr, 64)
+
+	rerankoutput := RerankOutput{
+		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
+		Created:     start.UnixMilli(),
+		KfpvCostUSD: int64(pricef * 1000),
+	}
+
+	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
+		totalprice.USD += int64(pricef * 1000)
+	}
+	cache, _ = json.Marshal(rerankoutput)
+	os.WriteFile(cachepath, cache, 0644)
+	return rerankoutput, nil
+}
+
+func RerankAPI(ctx context.Context, token string, payload []byte) (RerankingResponse, error) {
+	request := RerankInput{}
+	json.Unmarshal(payload, &request)
+	model := request.Model
+	if model == "" {
+		model = "semantic-ranker-default@latest"
+	}
+	out, err := rerankingGemini(ctx, token, request)
+	if out == nil && err != nil {
+		return RerankingResponse{
+			Error: &OpenAIError{Message: err.Error(), Type: "internal_error"},
+		}, err
+	}
+	return *out, nil
+}
+
+func rerankingGemini(ctx context.Context, token string, request RerankInput) (*RerankingResponse, error) {
+	model := request.Model
+	var err error
+	requestb, err := json.Marshal(map[string]any{
+		"model":   model,
+		"query":   request.Query,
+		"records": request.Records,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("GEMINIREQ", string(requestb), token)
+	url := "https://discoveryengine.googleapis.com/v1/projects/subiz-version-4/locations/global/rankingConfigs/default_ranking_config:rank"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
+	if err != nil {
+		return nil, log.EServer(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	output := buf.Bytes()
+	gemres := &GeminiRankingResponse{}
+	json.Unmarshal(output, gemres)
+	return toOpenAIRerankResponse(gemres)
+}
+
+// toOpenAIChatResponse converts a Gemini response to an OpenAI-compatible chat response.
+func toOpenAIRerankResponse(res *GeminiRankingResponse) (*RerankingResponse, error) {
+	if res.Error != nil {
+		param := ""
+		if len(res.Error.Details) > 0 && len(res.Error.Details[0].FieldViolations) > 0 {
+			param = res.Error.Details[0].FieldViolations[0].Field
+		}
+		return &RerankingResponse{
+			Error: &OpenAIError{
+				Message: res.Error.Message,
+				Type:    "invalid_request_error",
+				Param:   param,
+			},
+		}, nil
+	}
+	if res == nil {
+		return nil, fmt.Errorf("empty response from Gemini")
+	}
+
+	records := []*RerankRecord{}
+	for _, record := range res.Records {
+		records = append(records, &RerankRecord{
+			Id:      record.Id,
+			Title:   record.Title,
+			Content: record.Content,
+			Score:   record.Score,
+		})
+	}
+	return &RerankingResponse{
+		Created: time.Now().Unix(),
+		Object:  "reranking",
+		Records: records,
+	}, nil
+}
