@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/google/go-cmp v0.7.0
-	github.com/subiz/header v1.26.18
+	github.com/subiz/header v1.26.26
 	github.com/subiz/log v1.0.13
 	github.com/tidwall/sjson v1.2.5
 	google.golang.org/protobuf v1.36.10
@@ -48,8 +48,8 @@ require (
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251014184007-4626949a642f // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251020155222-88f65dc88635 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251020155222-88f65dc88635 // indirect
 	google.golang.org/grpc v1.76.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 )

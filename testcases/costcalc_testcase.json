@@ -133,5 +133,16 @@
       "prompt_tokens": 1,
       "total_tokens": 1
     }
+  },
+  "12": {
+    "cost": 29297500,
+    "model": "gpt-5",
+    "usage": {
+      "prompt_tokens": 23438,
+      "input_tokens_details": {
+        "cached_tokens": 4096
+      },
+      "total_tokens": 27528
+    }
   }
 }

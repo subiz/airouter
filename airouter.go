@@ -13,6 +13,7 @@ import (
 	"net/url"
 	neturl "net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1807,7 +1808,21 @@ type RerankInput struct {
 	Records []*RerankRecord `json:"records,omitempty"`
 }
 
-func Rerank(ctx context.Context, model, query string, records []*RerankRecord) (RerankOutput, error) {
+func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord) (RerankOutput, error) {
+	records := []*RerankRecord{}
+	for _, r := range inrecords {
+		records = append(records, r)
+	}
+	// keeping thing determistic
+	sort.Slice(records, func(i, j int) bool {
+		titlei, titlej := records[i].Title, records[j].Title
+		if titlei < titlej {
+			return titlei < titlej
+		}
+		conti, contj := records[i].Content, records[j].Content
+		return conti < contj
+	})
+
 	query = header.Norm(query, 1000)
 	defer header.KLock(query)()
 
