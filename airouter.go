@@ -681,14 +681,20 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 	}
 	input.Messages = messages
 
-	functioncalled := false
 	var requestbody []byte
 	completion := &OpenAIChatResponse{}
 
 	var totalCost float64
 	tokenUsages := []*Usage{}
 
-	for range 5 { // max 5 loops
+	turn := 0
+	for range 8 { // max 5 loops
+		if turn >= 6 {
+			// no more function calls
+			input.Tools = nil
+		}
+		turn++
+
 		// Retrieve the value and assert it as a string
 		accid, _ := ctx.Value("account_id").(string)
 		convoid, _ := ctx.Value("conversation_id").(string)
@@ -762,22 +768,17 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		if len(completion.Choices) == 0 {
 			break
 		}
-		toolCalls := completion.Choices[0].Message.ToolCalls
-		// Abort early if there are no tool calls
-		if len(toolCalls) == 0 || functioncalled {
-			break // only allow function call once
-		}
 
 		// If there is a was a function call, continue the conversation
 		c0 := completion.Choices[0].Message
-		c0content := ""
-		if c0.Content != nil {
-			c0content = *c0.Content
+		toolCalls := completion.Choices[0].Message.ToolCalls
+		// Abort early if there are no tool calls
+		if len(toolCalls) == 0 {
+			break // only allow function call once
 		}
 		input.ToolChoice = "" // reset tool choice
 		input.Messages = append(input.Messages, &header.LLMChatHistoryEntry{
 			Role:       c0.Role,
-			Content:    c0content,
 			Name:       c0.Name,
 			ToolCallId: c0.ToolCallId,
 			Refusal:    c0.Refusal,
@@ -788,7 +789,6 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			var callid string
 			var stop bool
 			if fn := fnM[toolCall.Function.Name]; fn != nil {
-				functioncalled = true
 				callid = toolCall.ID
 				output, stop = fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
 			}
