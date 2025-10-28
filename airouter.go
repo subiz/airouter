@@ -16,9 +16,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
+	"github.com/subiz/executor/v2"
 	"github.com/subiz/header"
 	"github.com/subiz/log"
 	"google.golang.org/protobuf/proto"
@@ -681,14 +683,20 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 	}
 	input.Messages = messages
 
-	functioncalled := false
 	var requestbody []byte
 	completion := &OpenAIChatResponse{}
 
 	var totalCost float64
 	tokenUsages := []*Usage{}
 
-	for range 5 { // max 5 loops
+	turn := 0
+	for range 8 { // max 5 loops
+		if turn >= 6 {
+			// no more function calls
+			input.Tools = nil
+		}
+		turn++
+
 		// Retrieve the value and assert it as a string
 		accid, _ := ctx.Value("account_id").(string)
 		convoid, _ := ctx.Value("conversation_id").(string)
@@ -732,6 +740,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		}
 
 		if len(cache) > 0 {
+			completion = &OpenAIChatResponse{}
 			if err = json.Unmarshal(cache, completion); err != nil {
 				cache = nil // invalid cache
 			}
@@ -749,6 +758,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			pricestr := resp.Header.Get("X-Cost-USD")
 			pricef, _ := strconv.ParseFloat(pricestr, 64)
 			totalCost += pricef
+			completion = &OpenAIChatResponse{}
 			json.Unmarshal(output, completion)
 			os.WriteFile(cachepath, output, 0644)
 		}
@@ -762,50 +772,48 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		if len(completion.Choices) == 0 {
 			break
 		}
+		// If there is a was a function call, continue the conversation
 		toolCalls := completion.Choices[0].Message.ToolCalls
 		// Abort early if there are no tool calls
-		if len(toolCalls) == 0 || functioncalled {
+		if len(toolCalls) == 0 {
 			break // only allow function call once
 		}
-
-		// If there is a was a function call, continue the conversation
-		c0 := completion.Choices[0].Message
-		c0content := ""
-		if c0.Content != nil {
-			c0content = *c0.Content
-		}
 		input.ToolChoice = "" // reset tool choice
+		c0 := completion.Choices[0].Message
 		input.Messages = append(input.Messages, &header.LLMChatHistoryEntry{
 			Role:       c0.Role,
-			Content:    c0content,
 			Name:       c0.Name,
 			ToolCallId: c0.ToolCallId,
 			Refusal:    c0.Refusal,
 			ToolCalls:  toOurToolCalls(c0.ToolCalls),
 		})
-		for _, toolCall := range toolCalls {
-			var output string
-			var callid string
-			var stop bool
-			if fn := fnM[toolCall.Function.Name]; fn != nil {
-				functioncalled = true
-				callid = toolCall.ID
-				output, stop = fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
+
+		muststop := false
+		executor.Async(len(toolCalls), func(i int, lock *sync.Mutex) {
+			toolCall := toolCalls[i]
+			fn := fnM[toolCall.Function.Name]
+			if fn == nil {
+				return
+			}
+			callid := toolCall.ID
+			output, stop := fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
+			if stop {
+				muststop = true
 			}
 
-			// m := openai.ToolMessage(output, toolCall.ID)
-			if stop {
-				goto exit
-			}
+			lock.Lock()
 			input.Messages = append(input.Messages, &header.LLMChatHistoryEntry{
 				Content:    output,
 				Role:       "tool",
-				ToolCallId: toolCall.ID,
+				ToolCallId: callid,
 			})
+			lock.Unlock()
+		}, 5)
+		if muststop {
+			break
 		}
 	}
 
-exit:
 	completionoutput := CompletionOutput{
 		Request:     requestbody,
 		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
