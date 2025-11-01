@@ -789,6 +789,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		})
 
 		muststop := false
+		tooloutmsgs := []*header.LLMChatHistoryEntry{}
 		executor.Async(len(toolCalls), func(i int, lock *sync.Mutex) {
 			toolCall := toolCalls[i]
 			fn := fnM[toolCall.Function.Name]
@@ -802,13 +803,23 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			}
 
 			lock.Lock()
-			input.Messages = append(input.Messages, &header.LLMChatHistoryEntry{
+			tooloutmsgs = append(tooloutmsgs, &header.LLMChatHistoryEntry{
 				Content:    output,
 				Role:       "tool",
 				ToolCallId: callid,
 			})
 			lock.Unlock()
 		}, 5)
+
+		if len(tooloutmsgs) > 0 {
+			sort.Slice(tooloutmsgs, func(i, j int) bool {
+				if tooloutmsgs[i].ToolCallId == tooloutmsgs[j].ToolCallId {
+					return tooloutmsgs[i].Content < tooloutmsgs[j].Content
+				}
+				return tooloutmsgs[i].ToolCallId < tooloutmsgs[j].ToolCallId
+			}) // make the order determistic (better caching)
+			input.Messages = append(input.Messages, tooloutmsgs...)
+		}
 		if muststop {
 			break
 		}
