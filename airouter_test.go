@@ -529,3 +529,77 @@ func TestRerank(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenAIMaxCompletionOutput(t *testing.T) {
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+	ctx := context.Background()
+	BACKEND = "https://test"
+	maxTokens := 10
+	input := CompletionInput{
+		Model: "gpt-3.5-turbo",
+		Messages: []*header.LLMChatHistoryEntry{{
+			Role: "user",
+			Contents: []*header.OpenAIMessageContent{{
+				Type: "text",
+				Text: "Write a very long story about a robot who discovers music. Keep writing until you are stopped.",
+			}},
+		}},
+		MaxCompletionTokens: maxTokens,
+	}
+
+	payload, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %v", err)
+	}
+
+	resp, err := ChatCompleteAPI(ctx, payload)
+	if err != nil {
+		t.Fatalf("ChatCompleteAPI failed: %v", err)
+	}
+
+	if resp.Error != nil {
+		t.Fatalf("ChatCompleteAPI returned an error: %s", resp.Error.Message)
+	}
+
+	if len(resp.Choices) == 0 {
+		t.Fatal("Expected at least one choice, but got none")
+	}
+
+	if resp.Choices[0].FinishReason != "length" {
+		t.Errorf("Expected finish reason to be 'length', but got '%s'", resp.Choices[0].FinishReason)
+	}
+
+	if resp.Usage == nil {
+		t.Fatal("Expected usage stats, but got nil")
+	}
+
+	if resp.Usage.CompletionTokens > int64(maxTokens+5) { // allow a small buffer
+		t.Errorf("Expected completion tokens to be around %d, but got %d", maxTokens, resp.Usage.CompletionTokens)
+	}
+
+	input.Model = "gemini-2.0-flash"
+	payload, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %v", err)
+	}
+	resp, err = ChatCompleteAPI(ctx, payload)
+	if err != nil {
+		t.Fatalf("ChatCompleteAPI failed: %v", err)
+	}
+
+	if resp.Error != nil {
+		t.Fatalf("ChatCompleteAPI returned an error: %s", resp.Error.Message)
+	}
+
+	if len(resp.Choices) == 0 {
+		t.Fatal("Expected at least one choice, but got none")
+	}
+
+	if resp.Usage == nil {
+		t.Fatal("Expected usage stats, but got nil")
+	}
+
+	if resp.Usage.CompletionTokens > int64(maxTokens+5) { // allow a small buffer
+		t.Errorf("Expected completion tokens to be around %d, but got %d", maxTokens, resp.Usage.CompletionTokens)
+	}
+}

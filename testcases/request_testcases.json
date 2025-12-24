@@ -1782,5 +1782,39 @@
       ],
       "generationConfig": {}
     }
+  },
+  "test_max_completion_tokens": {
+    "api": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me a very long story about a dragon."
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "max_completion_tokens": 100
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me a very long story about a dragon."
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "max_completion_tokens": 100
+    },
+    "gemini": {
+      "model": "models/gemini-2.0-flash",
+      "contents": [
+        {
+          "parts": [{ "text": "Tell me a very long story about a dragon." }],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "maxOutputTokens": 100
+      }
+    }
   }
 }

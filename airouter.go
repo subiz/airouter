@@ -648,17 +648,18 @@ type CompletionReasoning struct {
 }
 
 type CompletionInput struct {
-	Seed           int                           `json:"seed,omitempty"`
-	Model          string                        `json:"model,omitempty"`
-	NoLog          bool                          `json:"-,omitempty"` // disable log
-	Instruct       string                        `json:"instruct,omitempty"`
-	Messages       []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
-	ResponseFormat *ResponseFormat               `json:"response_format,omitempty"`
-	ToolChoice     string                        `json:"tool_choice,omitempty"`
-	Reasoning      *CompletionReasoning          `json:"reasoning,omitempty"`
-	Temperature    float32                       `json:"temperature,omitempty"`
-	TopP           float32                       `json:"top_p,omitempty"`
-	Tools          []OpenAITool                  `json:"tools,omitempty"`
+	Seed                int                           `json:"seed,omitempty"`
+	Model               string                        `json:"model,omitempty"`
+	NoLog               bool                          `json:"-,omitempty"` // disable log
+	Instruct            string                        `json:"instruct,omitempty"`
+	Messages            []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
+	MaxCompletionTokens int                           `json:"max_completion_tokens,omitempty"`
+	ResponseFormat      *ResponseFormat               `json:"response_format,omitempty"`
+	ToolChoice          string                        `json:"tool_choice,omitempty"`
+	Reasoning           *CompletionReasoning          `json:"reasoning,omitempty"`
+	Temperature         float32                       `json:"temperature,omitempty"`
+	TopP                float32                       `json:"top_p,omitempty"`
+	Tools               []OpenAITool                  `json:"tools,omitempty"`
 }
 
 func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
@@ -1177,6 +1178,11 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		changed = true
 	}
 
+	if req.MaxCompletionTokens > 0 {
+		m["max_completion_tokens"] = req.MaxCompletionTokens
+		changed = true
+	}
+
 	if changed {
 		delete(m, "-")
 		delete(m, "instruct")
@@ -1355,6 +1361,13 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 	if req.ResponseFormat != nil && req.ResponseFormat.JSONSchema != nil {
 		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
 		geminiReq.GenerationConfig.ResponseSchema = toGeminiSchema(req.ResponseFormat.JSONSchema.Schema)
+	}
+
+	if req.MaxCompletionTokens > 0 {
+		if geminiReq.GenerationConfig == nil {
+			geminiReq.GenerationConfig = &GeminiGenerationConfig{}
+		}
+		geminiReq.GenerationConfig.MaxOutputTokens = req.MaxCompletionTokens
 	}
 
 	var contents []*GeminiContent
