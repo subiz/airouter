@@ -23,6 +23,13 @@ type RequestTestCase struct {
 	Gemini *GeminiRequest   `json:"gemini"`
 }
 
+func TestFuck(t *testing.T) {
+	fmt.Println("OK", CalculateCost("gpt-4o-mini", &Usage{
+		PromptTokens:     210,
+		CompletionTokens: 6,
+		TotalTokens:      216,
+	}))
+}
 func TestRequestConversion(t *testing.T) {
 	file, err := os.ReadFile("./testcases/request_testcases.json")
 	if err != nil {

@@ -400,7 +400,7 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 	response := OpenAIChatResponse{}
 	if err := json.Unmarshal(output, &response); err != nil {
 		return OpenAIChatResponse{Error: &OpenAIError{Message: "Invalid response JSON format", Type: "internal_error"}},
-			log.EProvider(nil, "model", "completion", log.M{"_payload": output})
+			log.EProvider(context.Background(), "", nil, "model", "completion", log.M{"_payload": output})
 	}
 	return response, err
 }
@@ -446,7 +446,7 @@ func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionI
 	url := "https://api.openai.com/v1/chat/completions"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
-		return nil, log.EServer(err)
+		return nil, log.EServer(ctx, "", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+apikey)
 	req.Header.Set("Content-Type", "application/json")
@@ -462,10 +462,10 @@ func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionI
 
 	if resp.StatusCode != 200 {
 		if strings.EqualFold(string(output), "Error: Timeout was reached") {
-			return chatgpttimeouterr, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+			return chatgpttimeouterr, log.EProvider(ctx, "", nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 		}
 
-		return output, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+		return output, log.EProvider(context.Background(), "", nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 	}
 
 	return output, nil
@@ -548,14 +548,14 @@ func getOpenAIEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 	resp, err := client.Do(req)
 	if err != nil {
 		out.Error = &OpenAIError{Message: fmt.Sprintf("error sending request: %s", err.Error())}
-		return out, log.EProvider(err, "openai", "embedding", log.M{"status": resp.StatusCode, "model": model})
+		return out, log.EProvider(ctx, "", err, "openai", "embedding", log.M{"status": resp.StatusCode, "model": model})
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	err = json.Unmarshal(bodyBytes, &out)
 	if resp.StatusCode != http.StatusOK {
-		return out, log.EProvider(err, "openai", "embedding", log.M{"model": model, "status": resp.StatusCode, "_payload": bodyBytes})
+		return out, log.EProvider(ctx, "", err, "openai", "embedding", log.M{"model": model, "status": resp.StatusCode, "_payload": bodyBytes})
 	}
 	return out, err
 }
@@ -750,10 +750,10 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		if len(cache) == 0 {
 			resp, output, err := sendPOST(url, _apikey, requestbody)
 			if err != nil {
-				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
+				return "", CompletionOutput{}, log.EProvider(ctx, accid, err, "openai", "completion")
 			}
 			if resp.StatusCode != 200 {
-				return "", CompletionOutput{}, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+				return "", CompletionOutput{}, log.EProvider(ctx, accid, nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
 			}
 
 			pricestr := resp.Header.Get("X-Cost-USD")
@@ -910,10 +910,10 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
 	resp, resoutput, err := sendPOST(url, _apikey, []byte(text))
 	if err != nil {
-		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
+		return nil, EmbeddingOutput{}, log.EProvider(ctx, accid, err, "openai", "embedding")
 	}
 	if resp.StatusCode != 200 {
-		return nil, EmbeddingOutput{}, log.EProvider(nil, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
+		return nil, EmbeddingOutput{}, log.EProvider(ctx, accid, nil, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
 	}
 
 	json.Unmarshal(resoutput, response)
@@ -954,7 +954,7 @@ func sendPOST(url, token string, payload []byte) (*http.Response, []byte, error)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, nil, log.EProvider(err, "openai", "completion")
+		return nil, nil, log.EProvider(req.Context(), "", err, "openai", "completion")
 	}
 	defer resp.Body.Close()
 	buf := new(bytes.Buffer)
@@ -1677,7 +1677,7 @@ func chatCompleteGemini(ctx context.Context, apikey string, request CompletionIn
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
-		return nil, log.EServer(err)
+		return nil, log.EServer(ctx, "", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-goog-api-key", apikey)
@@ -1921,10 +1921,10 @@ func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord)
 
 	resp, resoutput, err := sendPOST(url, _apikey, payload)
 	if err != nil {
-		return RerankOutput{}, log.EProvider(err, "gemini", "reranking")
+		return RerankOutput{}, log.EProvider(context.Background(), "", err, "gemini", "reranking")
 	}
 	if resp.StatusCode != 200 {
-		return RerankOutput{}, log.EProvider(nil, "gemini", "reranking", log.M{"status": resp.StatusCode, "_payload": resoutput, "url": url})
+		return RerankOutput{}, log.EProvider(context.Background(), "", nil, "gemini", "reranking", log.M{"status": resp.StatusCode, "_payload": resoutput, "url": url})
 	}
 
 	json.Unmarshal(resoutput, response)
@@ -1996,7 +1996,7 @@ func rerankingGemini(ctx context.Context, token string, request RerankInput) (*R
 	url := "https://discoveryengine.googleapis.com/v1/projects/subiz-version-4/locations/global/rankingConfigs/default_ranking_config:rank"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
-		return nil, log.EServer(err)
+		return nil, log.EServer(context.Background(), "", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
