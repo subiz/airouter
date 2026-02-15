@@ -707,14 +707,17 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		if accid != "" {
 			q.Set("account_id", accid)
 		}
-		if id, _ := ctx.Value("conversation_id").(string); id != "" {
-			q.Set("x-conversation-id", id)
+		if convoid != "" {
+			q.Set("x-conversation-id", convoid)
 		}
-		if id, _ := ctx.Value("trace_id").(string); id != "" {
-			q.Set("x-trace-id", id)
+		if val, _ := ctx.Value("trace_id").(string); val != "" {
+			q.Set("x-trace-id", val)
 		}
-		if id, _ := ctx.Value("purpose").(string); id != "" {
-			q.Set("x-purpose", id)
+		if val, _ := ctx.Value("purpose").(string); val != "" {
+			q.Set("x-purpose", val) //
+		}
+		if val, _ := ctx.Value("source_id").(string); val != "" {
+			q.Set("x-source-id", val)
 		}
 
 		url := BACKEND + "/completions?" + q.Encode()
@@ -882,6 +885,9 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	}
 	if id, _ := ctx.Value("purpose").(string); id != "" {
 		q.Set("x-purpose", id)
+	}
+	if val, _ := ctx.Value("source_id").(string); val != "" {
+		q.Set("x-source-id", val)
 	}
 
 	q.Set("model", model)
