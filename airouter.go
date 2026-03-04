@@ -37,11 +37,11 @@ const Gpt_5 = "gpt-5"
 const Gpt_4_1_nano = "gpt-4.1-nano"
 const Gpt_4_1 = "gpt-4.1"
 
-const Gemini_2_0_flash = "gemini-2.0-flash"
-const Gemini_2_0_flash_lite = "gemini-2.0-flash-lite"
 const Gemini_2_5_pro = "gemini-2.5-pro"
 const Gemini_2_5_flash = "gemini-2.5-flash"
 const Gemini_2_5_flash_lite = "gemini-2.5-flash-lite"
+
+const Gemini_3_1_flash_lite = "gemini-3.1-flash-lite-preview"
 
 const Text_embedding_3_small = "text-embedding-3-small"
 const Text_embedding_3_large = "text-embedding-3-large"
@@ -89,15 +89,19 @@ func ToModel(model string) string {
 	}
 
 	if model == "gemini-1.5-flash" {
-		return Gemini_2_0_flash
+		return Gemini_3_1_flash_lite
 	}
 
 	if model == "gemini-2.0-flash-lite" {
-		return Gemini_2_0_flash_lite
+		return Gemini_2_5_flash_lite
+	}
+
+	if model == "gemini-3.1-flash-lite" || model == "gemini-3.1-flash-lite-preview" {
+		return Gemini_3_1_flash_lite
 	}
 
 	if model == "gemini-2.0-flash" {
-		return Gemini_2_0_flash
+		return Gemini_2_5_flash
 	}
 
 	if model == "gemini-2.5-flash-lite" {
@@ -113,7 +117,7 @@ func ToModel(model string) string {
 	}
 
 	if strings.HasPrefix(model, "gemini") {
-		return Gemini_2_0_flash
+		return Gemini_3_1_flash_lite
 	}
 	return Gpt_4o_mini
 }
@@ -127,7 +131,7 @@ func ToGeminiModel(model string) string {
 	}
 
 	if model == Gpt_4o_mini || model == Gpt_5_mini {
-		return Gemini_2_0_flash
+		return Gemini_3_1_flash_lite
 	}
 
 	if model == Gpt_4o || model == Gpt_4_1 || model == Gpt_5 {
@@ -152,15 +156,11 @@ func ToOpenAIModel(model string) string {
 		return model
 	}
 
-	if model == Gemini_2_0_flash_lite {
-		return Gpt_4_1_nano
-	}
-
 	if model == Gemini_2_5_flash_lite {
 		return Gpt_5_nano
 	}
 
-	if model == Gemini_2_0_flash {
+	if model == Gemini_3_1_flash_lite {
 		return Gpt_4o_mini
 	}
 
@@ -193,7 +193,7 @@ func GetFallbackChatModel(model string) string {
 		return ToOpenAIModel(model)
 	}
 
-	return Gemini_2_0_flash
+	return Gemini_3_1_flash_lite
 }
 
 // per 1M tokens
@@ -207,11 +207,14 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-5-mini":   0.25,
 	"gpt-5-nano":   0.05,
 
-	"gemini-2.0-flash":      0.1,
-	"gemini-2.5-flash":      0.30,
-	"gemini-2.0-flash-lite": 0.075,
-	"gemini-2.5-flash-lite": 0.1,
-	"gemini-2.5-pro":        2.5,
+	"gemini-2.0-flash":              0.1,
+	"gemini-2.5-flash":              0.3,
+	"gemini-3-flash":                0.5,
+	"gemini-2.0-flash-lite":         0.075,
+	"gemini-2.5-flash-lite":         0.1,
+	"gemini-3.1-flash-lite":         0.25,
+	"gemini-3.1-flash-lite-preview": 0.25,
+	"gemini-2.5-pro":                2.5,
 }
 
 // per 1M tokens
@@ -225,11 +228,13 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-5-mini":   2,
 	"gpt-5-nano":   0.4,
 
-	"gemini-2.0-flash-lite": 0.3,
-	"gemini-2.5-flash-lite": 0.4,
-	"gemini-2.0-flash":      0.4,
-	"gemini-2.5-flash":      2.5,
-	"gemini-2.5-pro":        15,
+	"gemini-2.0-flash-lite":         0.3,
+	"gemini-2.5-flash-lite":         0.4,
+	"gemini-3.1-flash-lite":         1.5,
+	"gemini-3.1-flash-lite-preview": 1.5,
+	"gemini-2.0-flash":              0.4,
+	"gemini-2.5-flash":              2.5,
+	"gemini-2.5-pro":                15,
 }
 
 // per 1M tokens
@@ -243,11 +248,15 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-5-mini":   0.025,
 	"gpt-5-nano":   0.005,
 
-	"gemini-2.0-flash":      0.1, // no caching
-	"gemini-2.5-flash":      0.225,
-	"gemini-2.0-flash-lite": 0.075, // no caching
-	"gemini-2.5-flash-lite": 0.25,
-	"gemini-2.5-pro":        11.25,
+	"gemini-2.0-flash": 0.1, // no caching
+	"gemini-2.5-flash": 0.225,
+
+	"gemini-2.0-flash-lite":         0.075, // no caching
+	"gemini-2.5-flash-lite":         0.25,
+	"gemini-3.1-flash-lite":         0.025,
+	"gemini-3.1-flash-lite-preview": 0.025,
+
+	"gemini-2.5-pro": 11.25,
 }
 
 // OpenAIChatMessage mimics the structure of a message in an OpenAI Chat Completion request.
