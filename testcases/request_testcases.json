@@ -15,7 +15,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [
@@ -51,7 +51,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [
@@ -94,7 +94,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [
@@ -133,7 +133,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "systemInstruction": {
         "parts": [
           {
@@ -278,7 +278,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "systemInstruction": {
         "parts": [
           {
@@ -431,7 +431,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [
@@ -562,7 +562,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "systemInstruction": {
         "parts": [
           {
@@ -733,7 +733,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "systemInstruction": {
         "parts": [
           {
@@ -893,7 +893,7 @@
         }
       ],
       "generationConfig": {},
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "systemInstruction": { "parts": [{ "text": "Hi" }] }
     }
   },
@@ -918,7 +918,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [
@@ -978,7 +978,7 @@
         "temperature": 0,
         "topP": 1
       },
-      "model": "models/gemini-2.0-flash"
+      "model": "models/gemini-3.1-flash-lite-preview"
     }
   },
   "with_response_format_1": {
@@ -1094,7 +1094,7 @@
           "type": "object"
         }
       },
-      "model": "models/gemini-2.0-flash"
+      "model": "models/gemini-3.1-flash-lite-preview"
     }
   },
   "10": {
@@ -1133,7 +1133,7 @@
           "content": "Bạn ơi cho mình hỏi mình muốn in hóa đơn bán ra một loạt thi lam ntn"
         }
       ],
-      "model": "gemini-2.0-flash",
+      "model": "gpt-4o-mini",
       "top_p": 1,
       "tools": [
         {
@@ -1177,7 +1177,7 @@
           ]
         }
       ],
-      "model": "models/gemini-2.0-flash"
+      "model": "models/gemini-3.1-flash-lite-preview"
     }
   },
   "11": {
@@ -1244,7 +1244,7 @@
         { "role": "system", "content": "User sent message on Website" },
         { "role": "assistant", "content": "OK" }
       ],
-      "model": "gemini-2.5-flash",
+      "model": "gpt-4.1-mini",
       "top_p": 1,
       "tools": [
         {
@@ -1423,7 +1423,7 @@
           "content": "Hi"
         }
       ],
-      "model": "gemini-2.5-flash",
+      "model": "gpt-4.1-mini",
       "top_p": 1,
       "response_format": {
         "type": "json_schema",
@@ -1558,12 +1558,10 @@
       "model": "gpt-4o-mini",
       "temperature": 0.7,
       "top_p": 1,
-      "reasoning": {
-        "effort": "medium"
-      }
+      "reasoning_effort": "medium"
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [
@@ -1608,12 +1606,10 @@
           "content": "hello"
         }
       ],
-      "model": "gemini-2.5-flash-lite",
+      "model": "gpt-5-nano",
       "temperature": 0.2,
       "top_p": 0.5,
-      "reasoning": {
-        "effort": "high"
-      }
+      "reasoning_effort": "high"
     },
     "gemini": {
       "model": "models/gemini-2.5-flash-lite",
@@ -1653,7 +1649,7 @@
       "model": "gemini-2.5-flash-lite"
     },
     "openai": {
-      "model": "gemini-2.5-flash-lite",
+      "model": "gpt-5-nano",
       "messages": [
         {
           "role": "system",
@@ -1707,7 +1703,7 @@
       "model": "gpt-4o-mini"
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "systemInstruction": {
         "parts": [{ "text": "You are a calculator. What is 1+1" }]
       },
@@ -1719,8 +1715,7 @@
         },
         { "parts": [{ "text": "ok2" }], "role": "user" }
       ],
-      "generationConfig": {},
-      "model": "models/gemini-2.0-flash"
+      "generationConfig": {}
     }
   },
   "image_0": {
@@ -1805,7 +1800,7 @@
       "max_completion_tokens": 100
     },
     "gemini": {
-      "model": "models/gemini-2.0-flash",
+      "model": "models/gemini-3.1-flash-lite-preview",
       "contents": [
         {
           "parts": [{ "text": "Tell me a very long story about a dragon." }],
@@ -1815,6 +1810,39 @@
       "generationConfig": {
         "maxOutputTokens": 100
       }
+    }
+  },
+
+  "test_verbosity": {
+    "api": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me a very long story about a dragon."
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "verbosity": "low"
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me a very long story about a dragon."
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "verbosity": "low"
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "generationConfig": {},
+      "contents": [
+        {
+          "parts": [{ "text": "Tell me a very long story about a dragon." }],
+          "role": "user"
+        }
+      ]
     }
   }
 }

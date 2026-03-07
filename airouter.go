@@ -101,7 +101,7 @@ func ToModel(model string) string {
 	}
 
 	if model == "gemini-2.0-flash" {
-		return Gemini_2_5_flash
+		return Gemini_3_1_flash_lite
 	}
 
 	if model == "gemini-2.5-flash-lite" {
@@ -326,21 +326,6 @@ type ResponseFormat struct {
 type OpenAIReasoning struct {
 	Effort string `json:"effort,omitempty"`
 }
-
-// OpenAIChatRequest mimics the structure of an OpenAI Chat Completion request.
-/*
-type OpenAIChatRequest struct {
-	Seed           int                 `json:"seed,omitempty"`
-	Messages       []OpenAIChatMessage `json:"messages,omitempty"`
-	Model          string              `json:"model,omitempty"`
-	Temperature    float32             `json:"temperature,omitempty"`
-	TopP           float32             `json:"top_p,omitempty"`
-	Tools          []OpenAITool        `json:"tools,omitempty"`
-	ResponseFormat *ResponseFormat     `json:"response_format,omitempty"`
-	ToolChoice     string              `json:"tool_choice,omitempty"`
-	Reasoning      *OpenAIReasoning    `json:"reasoning,omitempty"`
-  }
-*/
 
 // OpenAIChoice mimics the structure of a choice in an OpenAI Chat Completion response.
 type OpenAIChoice struct {
@@ -657,18 +642,21 @@ type CompletionReasoning struct {
 }
 
 type CompletionInput struct {
-	Seed                int                           `json:"seed,omitempty"`
-	Model               string                        `json:"model,omitempty"`
-	NoLog               bool                          `json:"-,omitempty"` // disable log
-	Instruct            string                        `json:"instruct,omitempty"`
-	Messages            []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
-	MaxCompletionTokens int                           `json:"max_completion_tokens,omitempty"`
-	ResponseFormat      *ResponseFormat               `json:"response_format,omitempty"`
-	ToolChoice          string                        `json:"tool_choice,omitempty"`
-	Reasoning           *CompletionReasoning          `json:"reasoning,omitempty"`
-	Temperature         float32                       `json:"temperature,omitempty"`
-	TopP                float32                       `json:"top_p,omitempty"`
-	Tools               []OpenAITool                  `json:"tools,omitempty"`
+	Seed                 int                           `json:"seed,omitempty"`
+	PromptCacheKey       string                        `json:"prompt_cache_key,omitempty"`
+	PromptCacheRetention string                        `json:"prompt_cache_retention,omitempty"`
+	Verbosity            string                        `json:"verbosity,omitempty"`
+	Model                string                        `json:"model,omitempty"`
+	NoLog                bool                          `json:"-,omitempty"` // disable log
+	Instruct             string                        `json:"instruct,omitempty"`
+	Messages             []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
+	MaxCompletionTokens  int                           `json:"max_completion_tokens,omitempty"`
+	ResponseFormat       *ResponseFormat               `json:"response_format,omitempty"`
+	ToolChoice           string                        `json:"tool_choice,omitempty"`
+	Reasoning            *CompletionReasoning          `json:"reasoning,omitempty"`
+	Temperature          float32                       `json:"temperature,omitempty"`
+	TopP                 float32                       `json:"top_p,omitempty"`
+	Tools                []OpenAITool                  `json:"tools,omitempty"`
 }
 
 func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
@@ -1078,9 +1066,14 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	if err := json.Unmarshal(b, &m); err != nil {
 		return nil, err
 	}
-
 	changed := false
 	if _, hasDash := m["-"]; hasDash {
+		changed = true
+	}
+
+	model = ToOpenAIModel(req.Model)
+	if model != req.Model {
+		m["model"] = model
 		changed = true
 	}
 
@@ -1196,6 +1189,12 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	if req.MaxCompletionTokens > 0 {
 		m["max_completion_tokens"] = req.MaxCompletionTokens
 		changed = true
+	}
+
+	if req.Reasoning != nil {
+		delete(m, "reasoning")
+		changed = true
+		m["reasoning_effort"] = req.Reasoning.Effort
 	}
 
 	if changed {
