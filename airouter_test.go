@@ -40,7 +40,7 @@ func TestRequestConversion(t *testing.T) {
 				t.Fatalf("ToGeminiRequestJSON failed: %v", err)
 			}
 
-			var actualMap, expectedMap map[string]interface{}
+			var actualMap, expectedMap map[string]any
 			if err := json.Unmarshal([]byte(actualJSON), &actualMap); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
 			}
@@ -147,7 +147,7 @@ func TestResponseConversion(t *testing.T) {
 				t.Fatalf("Failed to marshal expected response: %v", err)
 			}
 
-			var actualMap, expectedMap map[string]interface{}
+			var actualMap, expectedMap map[string]any
 			if err := json.Unmarshal(actualJSON, &actualMap); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
 			}
@@ -223,7 +223,7 @@ func TestChatCompletion1(t *testing.T) {
 				}
 			}
 
-			var actualMap, expectedMap map[string]interface{}
+			var actualMap, expectedMap map[string]any
 			if err := json.Unmarshal(output, &actualMap); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
 			}
@@ -315,7 +315,7 @@ func TestChatCompletionFull(t *testing.T) {
 				}
 			}
 
-			var actualMap, expectedMap map[string]interface{}
+			var actualMap, expectedMap map[string]any
 			if err := json.Unmarshal(output, &actualMap); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
 			}
@@ -394,7 +394,7 @@ func TestGetEmbedding(t *testing.T) {
 				t.Fatalf("Failed to marshal expected response: %v", err)
 			}
 
-			var actualMap, expectedMap map[string]interface{}
+			var actualMap, expectedMap map[string]any
 			if err := json.Unmarshal(outputb, &actualMap); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
 			}
