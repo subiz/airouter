@@ -1547,9 +1547,7 @@
       "model": "gpt-4o-mini",
       "temperature": 0.7,
       "top_p": 1,
-      "reasoning": {
-        "effort": "medium"
-      }
+      "reasoning_effort": "medium"
     },
     "openai": {
       "messages": [
@@ -1594,9 +1592,7 @@
       "temperature": 0.2,
       "top_p": 0.5,
       "tools": null,
-      "reasoning": {
-        "effort": "high"
-      }
+      "reasoning_effort": "high"
     },
     "openai": {
       "seed": 90,

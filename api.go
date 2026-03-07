@@ -465,12 +465,6 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		changed = true
 	}
 
-	if req.Reasoning != nil {
-		delete(m, "reasoning")
-		changed = true
-		m["reasoning_effort"] = req.Reasoning.Effort
-	}
-
 	if changed {
 		delete(m, "-")
 		delete(m, "instruct")
@@ -517,14 +511,14 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		Tools: geminiTools,
 	}
 
-	if req.Reasoning != nil {
+	if req.ReasoningEffort != "" && req.ReasoningEffort != "none" {
 		budget := 0
-		switch req.Reasoning.Effort {
-		case "low":
+		switch req.ReasoningEffort {
+		case "minimal", "low":
 			budget = 256
 		case "medium":
 			budget = 1024
-		case "high":
+		case "high", "xhigh":
 			budget = 4096
 		}
 

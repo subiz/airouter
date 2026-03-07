@@ -11,7 +11,6 @@ AI Router is a lightweight Go client for the Subiz AI Proxy, providing a unified
 - **Unified API**: Single interface for Chat Completion, Text Embedding, and Reranking across different providers.
 - **Provider Agnostic**: Switch between GPT-4, GPT-5, Gemini, and other models without changing your core logic.
 - **Simplified Configuration**: Easy initialization with a Subiz API key.
-- **Reasoning Support**: Support for modern reasoning models with configurable effort levels.
 
 ## Installation
 
@@ -52,9 +51,7 @@ func main() {
     ctx := context.Background()
     output, _, err := airouter.Complete(ctx, airouter.CompletionInput{
         Model: airouter.Gpt_5_nano,
-        Reasoning: &airouter.CompletionReasoning{
-            Effort: "low",
-        },
+        ReasoningEffort: "low",
         Instruct: "Tell a short story about a brave dragon.",
     })
 
