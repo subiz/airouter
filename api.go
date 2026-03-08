@@ -465,6 +465,19 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		changed = true
 	}
 
+	if req.Reasoning != nil {
+		delete(m, "reasoning")
+		changed = true
+		m["reasoning_effort"] = req.Reasoning.Effort
+	}
+
+	if m["reasoning_effort"] != "" {
+		if model == "gpt-4o" || model == "gpt-4o-mini" || model == "gpt-4.1-mini" || model == "gpt-4.1-nano" {
+			delete(m, "reasoning_effort")
+			changed = true
+		}
+	}
+
 	if changed {
 		delete(m, "-")
 		delete(m, "instruct")

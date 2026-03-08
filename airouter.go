@@ -423,7 +423,12 @@ func Init(apikey string) {
 }
 
 type TotalCost struct {
-	USD int64 `json:"usd"` // 1000000000
+	USD int64 `json:"usd"` // kfpvusd = usd*1_000_000_000 = fpvusd * 1000
+}
+
+type CompletionReasoning struct {
+	Effort    string `json:"effort,omitempty"` // high, medium, low
+	MaxTokens int    `json:"max_tokens,omitempty"`
 }
 
 type CompletionInput struct {
@@ -438,6 +443,7 @@ type CompletionInput struct {
 	MaxCompletionTokens  int                           `json:"max_completion_tokens,omitempty"`
 	ResponseFormat       *ResponseFormat               `json:"response_format,omitempty"`
 	ToolChoice           string                        `json:"tool_choice,omitempty"`
+	Reasoning            *CompletionReasoning          `json:"reasoning,omitempty"`
 	ReasoningEffort      string                        `json:"reasoning_effort,omitempty"`
 	Temperature          float32                       `json:"temperature,omitempty"`
 	TopP                 float32                       `json:"top_p,omitempty"`
