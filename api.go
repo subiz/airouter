@@ -326,6 +326,9 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 		return OpenAIChatResponse{Error: &OpenAIError{Message: "Invalid response JSON format", Type: "internal_error"}},
 			log.EProvider(nil, "model", "completion", log.M{"_payload": output})
 	}
+	if response.Usage != nil {
+		response.Usage.KFpvCostUSD = CalculateCost(model, response.Usage)
+	}
 	return response, err
 }
 
