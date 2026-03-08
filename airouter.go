@@ -339,6 +339,7 @@ type Usage struct {
 	PromptTokensDetails *PromptTokensDetails `json:"prompt_tokens_details,omitempty"`
 
 	KFpvCostUSD int64 `json:"kfpv_cost_usd"` // our fields not openai
+	CostVND     int64 `json:"cost_vnd"`      // our fields not openai
 }
 
 // OpenAIError represents the structure of an error in an OpenAI Chat Completion response.
