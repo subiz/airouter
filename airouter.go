@@ -507,6 +507,9 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		if val, _ := ctx.Value("purpose").(string); val != "" {
 			q.Set("x-purpose", val) //
 		}
+		if val, _ := ctx.Value("is-ai-msg").(string); val != "" {
+			q.Set("is-ai-msg", val)
+		}
 		if val, _ := ctx.Value("source_id").(string); val != "" {
 			q.Set("x-source-id", val)
 		}
@@ -676,6 +679,9 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	}
 	if id, _ := ctx.Value("purpose").(string); id != "" {
 		q.Set("x-purpose", id)
+	}
+	if val, _ := ctx.Value("is-ai-msg").(string); val != "" {
+		q.Set("is-ai-msg", val)
 	}
 	if val, _ := ctx.Value("source_id").(string); val != "" {
 		q.Set("x-source-id", val)
@@ -886,6 +892,9 @@ func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord)
 	}
 	if id, _ := ctx.Value("purpose").(string); id != "" {
 		q.Set("x-purpose", id)
+	}
+	if val, _ := ctx.Value("is-ai-msg").(string); val != "" {
+		q.Set("is-ai-msg", val)
 	}
 
 	q.Set("model", model)
