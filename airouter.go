@@ -32,6 +32,8 @@ const Gpt_5_nano = "gpt-5-nano"
 const Gpt_5 = "gpt-5"
 const Gpt_4_1_nano = "gpt-4.1-nano"
 const Gpt_4_1 = "gpt-4.1"
+const Gpt_5_4_nano = "gpt-5.4-nano"
+const Gpt_5_4_mini = "gpt-5.4-mini"
 
 const Gemini_2_5_pro = "gemini-2.5-pro"
 const Gemini_2_5_flash = "gemini-2.5-flash"
@@ -77,6 +79,14 @@ func ToModel(model string) string {
 
 	if model == "gpt-5-nano" || strings.HasPrefix(model, "gpt-5-nano-2") {
 		return Gpt_5_nano
+	}
+
+	if model == "gpt-5.4-nano" || strings.HasPrefix(model, "gpt-5.4-nano-2") {
+		return Gpt_5_4_nano
+	}
+
+	if model == "gpt-5.4-mini" || strings.HasPrefix(model, "gpt-5.4-mini-2") {
+		return Gpt_5_4_mini
 	}
 
 	// fallback for gpt
@@ -202,6 +212,8 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-5":        1.25,
 	"gpt-5-mini":   0.25,
 	"gpt-5-nano":   0.05,
+	"gpt-5.4-nano": 0.2,
+	"gpt-5.4-mini": 0.75,
 
 	"gemini-2.0-flash":              0.1,
 	"gemini-2.5-flash":              0.3,
@@ -223,6 +235,8 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-5":        10,
 	"gpt-5-mini":   2,
 	"gpt-5-nano":   0.4,
+	"gpt-5.4-nano": 1.25,
+	"gpt-5.4-mini": 4.5,
 
 	"gemini-2.0-flash-lite":         0.3,
 	"gemini-2.5-flash-lite":         0.4,
@@ -243,6 +257,8 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-5":        0.125,
 	"gpt-5-mini":   0.025,
 	"gpt-5-nano":   0.005,
+	"gpt-5.4-nano": 0.02,
+	"gpt-5.4-mini": 0.075,
 
 	"gemini-2.0-flash": 0.1, // no caching
 	"gemini-2.5-flash": 0.225,
@@ -439,6 +455,7 @@ type CompletionInput struct {
 	PromptCacheKey       string                        `json:"prompt_cache_key,omitempty"`
 	PromptCacheRetention string                        `json:"prompt_cache_retention,omitempty"`
 	Verbosity            string                        `json:"verbosity,omitempty"`
+	Stop                 []string                      `json:"stop,omitempty"`
 	Model                string                        `json:"model,omitempty"`
 	NoLog                bool                          `json:"-,omitempty"` // disable log
 	Instruct             string                        `json:"instruct,omitempty"`
