@@ -326,7 +326,7 @@ type Function struct {
 	Description string             `json:"description,omitempty"`
 	Parameters  *header.JSONSchema `json:"parameters,omitempty"`
 
-	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) `json:"-"` // "", true -> abandon completion, stop the flow immediately
+	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) string `json:"-"` // "", true -> abandon completion
 }
 
 // ResponseFormat specifies the format of the response.
@@ -468,6 +468,7 @@ type CompletionInput struct {
 	Temperature          float32                       `json:"temperature,omitempty"`
 	TopP                 float32                       `json:"top_p,omitempty"`
 	Tools                []OpenAITool                  `json:"tools,omitempty"`
+	StopAfterToolCalled  bool                          `json:"stop_after_tool_called"`
 }
 
 func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
@@ -603,7 +604,6 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			ToolCalls:  toOurToolCalls(c0.ToolCalls),
 		})
 
-		muststop := false
 		tooloutmsgs := []*header.LLMChatHistoryEntry{}
 		executor.Async(len(toolCalls), func(i int, lock *sync.Mutex) {
 			toolCall := toolCalls[i]
@@ -612,10 +612,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 				return
 			}
 			callid := toolCall.ID
-			output, stop := fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
-			if stop {
-				muststop = true
-			}
+			output := fn.Handler(ctx, toolCall.Function.Arguments, callid, nil)
 
 			lock.Lock()
 			tooloutmsgs = append(tooloutmsgs, &header.LLMChatHistoryEntry{
@@ -624,9 +621,14 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 				ToolCallId: callid,
 			})
 			lock.Unlock()
+
 		}, 5)
 
+		muststop := false
 		if len(tooloutmsgs) > 0 {
+			if input.StopAfterToolCalled {
+				muststop = true
+			}
 			sort.Slice(tooloutmsgs, func(i, j int) bool {
 				if tooloutmsgs[i].ToolCallId == tooloutmsgs[j].ToolCallId {
 					return tooloutmsgs[i].Content < tooloutmsgs[j].Content
