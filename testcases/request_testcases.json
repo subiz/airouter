@@ -1555,8 +1555,7 @@
       ],
       "model": "gpt-4o-mini",
       "temperature": 0.7,
-      "top_p": 1,
-      "reasoning_effort": "medium"
+      "top_p": 1
     },
     "gemini": {
       "model": "models/gemini-3.1-flash-lite-preview",
@@ -1839,6 +1838,82 @@
           "role": "user"
         }
       ]
+    }
+  },
+
+  "test_stop_0": {
+    "api": {
+      "instruct": "You are a calculator. What is 1+1",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "stop": [" "],
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "stop": [" "],
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "stopSequences": [" "],
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
+    }
+  },
+
+  "test_stop_1": {
+    "api": {
+      "instruct": "You are a calculator. What is 1+1",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "stop": ["1", "2", "3", "4", "5", "6"],
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "stop": ["1", "2", "3", "4"],
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "stopSequences": ["1", "2", "3", "4", "5"],
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
     }
   }
 }

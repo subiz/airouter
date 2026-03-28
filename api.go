@@ -481,6 +481,16 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		}
 	}
 
+	if len(req.Stop) > 4 {
+		// Not supported with latest reasoning models o3 and o4-mini.
+		// Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+		changed = true
+		m["stop"] = req.Stop[:4]
+		if model == "o4-mini" || model == "o3" {
+			delete(m, "stop")
+		}
+	}
+
 	if changed {
 		delete(m, "-")
 		delete(m, "instruct")
@@ -691,6 +701,12 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		geminiReq.Contents = contents
 	}
 
+	if len(req.Stop) > 0 {
+		geminiReq.GenerationConfig.StopSequences = req.Stop
+		if len(geminiReq.GenerationConfig.StopSequences) > 5 {
+			geminiReq.GenerationConfig.StopSequences = geminiReq.GenerationConfig.StopSequences[:5]
+		}
+	}
 	b, err := json.Marshal(geminiReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Gemini request: %w", err)
