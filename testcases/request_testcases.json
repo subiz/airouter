@@ -198,7 +198,7 @@
         {
           "function": {
             "name": "compare_cars",
-            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -254,7 +254,7 @@
         {
           "function": {
             "name": "compare_cars",
-            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -328,7 +328,7 @@
           "functionDeclarations": [
             {
               "name": "compare_cars",
-              "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+              "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
               "parameters": {
                 "type": "object",
                 "properties": {
@@ -655,7 +655,7 @@
         {
           "function": {
             "name": "compare_cars",
-            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -710,7 +710,7 @@
         {
           "function": {
             "name": "compare_cars",
-            "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+            "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -783,7 +783,7 @@
           "functionDeclarations": [
             {
               "name": "compare_cars",
-              "description": "KHi khách hàng có nhu cầu so sánh 2 xe",
+              "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
               "parameters": {
                 "type": "object",
                 "properties": {
@@ -1913,6 +1913,129 @@
         "candidateCount": 1,
         "temperature": 0.7,
         "topP": 1
+      }
+    }
+  },
+
+  "no_reasoning_with_tools_for_5.1": {
+    "api": {
+      "seed": 90,
+      "messages": [
+        {
+          "role": "system",
+          "content": "hello"
+        }
+      ],
+      "model": "gpt-5.4-mini",
+      "temperature": 0.2,
+      "top_p": 0.5,
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ],
+      "reasoning_effort": "high"
+    },
+    "openai": {
+      "seed": 90,
+      "messages": [
+        {
+          "role": "system",
+          "content": "hello"
+        }
+      ],
+      "tools": [
+        {
+          "function": {
+            "name": "compare_cars",
+            "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
+            "parameters": {
+              "additionalProperties": false,
+              "properties": {
+                "base_car_name": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                },
+                "compare_car_name": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                }
+              },
+              "required": ["base_car_name", "compare_car_name"],
+              "type": "object"
+            }
+          },
+          "type": "function"
+        }
+      ],
+      "model": "gpt-5.4-mini",
+      "temperature": 0.2,
+      "top_p": 0.5
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "compare_cars",
+              "description": "Khi khách hàng có nhu cầu so sánh 2 xe",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "base_car_name": {
+                    "type": "string",
+                    "description": "Tên đầy đủ của mẫu xe mà khách dùng để làm căn cứ so sánh"
+                  },
+                  "compare_car_name": {
+                    "type": "string",
+                    "description": "Tên đầy đủ của mẫu xe mà khách muốn so sánh"
+                  }
+                },
+                "required": ["base_car_name", "compare_car_name"]
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "seed": 90,
+        "topP": 0.5,
+        "temperature": 0.2,
+        "thinkingConfig": {
+          "thinkingBudget": 4096
+        }
       }
     }
   }

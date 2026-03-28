@@ -479,6 +479,14 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 			delete(m, "reasoning_effort")
 			changed = true
 		}
+
+		if model == "gpt-5.4-mini" || model == "gpt-5.4-nano" {
+			// Function tools with reasoning_effort are not supported for gpt-5.4-nano in /v1/chat/completions. Please use /v1/responses instead.
+			if len(req.Tools) > 0 {
+				delete(m, "reasoning_effort")
+				changed = true
+			}
+		}
 	}
 
 	if len(req.Stop) > 4 {
