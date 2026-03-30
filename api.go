@@ -409,6 +409,13 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		}
 	}
 
+	if req.Verbosity != "" {
+		if strings.HasPrefix(model, "gpt-4") || strings.HasPrefix(model, "gpt-3") {
+			delete(m, "verbosity")
+			changed = true
+		}
+	}
+
 	messagesi := m["messages"]
 	if messagesi == nil {
 		messagesi = []any{}

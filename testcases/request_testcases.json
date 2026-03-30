@@ -1808,7 +1808,7 @@
     }
   },
 
-  "test_verbosity": {
+  "test_verbosity_0": {
     "api": {
       "messages": [
         {
@@ -1826,7 +1826,39 @@
           "content": "Tell me a very long story about a dragon."
         }
       ],
-      "model": "gpt-4o-mini",
+      "model": "gpt-4o-mini"
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "generationConfig": {},
+      "contents": [
+        {
+          "parts": [{ "text": "Tell me a very long story about a dragon." }],
+          "role": "user"
+        }
+      ]
+    }
+  },
+
+  "test_verbosity_1": {
+    "api": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me a very long story about a dragon."
+        }
+      ],
+      "model": "gpt-5-mini",
+      "verbosity": "low"
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me a very long story about a dragon."
+        }
+      ],
+      "model": "gpt-5-mini",
       "verbosity": "low"
     },
     "gemini": {
