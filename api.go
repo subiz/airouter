@@ -425,7 +425,7 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 			return b, nil
 		}
 
-		if rolei, _ := msg["role"]; rolei != nil {
+		if rolei := msg["role"]; rolei != nil {
 			role, _ := rolei.(string)
 			newrole := role
 			newrole = strings.TrimSpace(strings.ToLower(role))
@@ -497,6 +497,11 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		if model == "o4-mini" || model == "o3" {
 			delete(m, "stop")
 		}
+	}
+
+	if _, has := m["stop_after_tool_called"]; has {
+		delete(m, "stop_after_tool_called")
+		changed = true
 	}
 
 	if changed {
@@ -1128,41 +1133,4 @@ func toOpenAISchema(h *header.JSONSchema) *OpenAIJSONSchema {
 		p.Properties[k] = toOpenAISchema(v)
 	}
 	return p
-}
-
-func addAdditionalProp(schema map[string]any) {
-	propsi := schema["properties"]
-	if propsi == nil {
-		return
-	}
-	props, _ := propsi.(map[string]any)
-	for _, propi := range props {
-		if prop, _ := propi.(map[string]any); prop != nil {
-			typi := prop["type"]
-			if typi == nil {
-				continue
-			}
-			typ := typi.(string)
-
-			if typ == "array" {
-				itemsi := prop["items"]
-				if itemsi != nil {
-					items := itemsi.(map[string]any)
-					api := items["additionalProperties"]
-					pass := false
-					if api != nil {
-						b, _ := api.(bool)
-						if b {
-							pass = true
-						}
-					}
-
-					if !pass {
-						items["additionalProperties"] = false
-					}
-					addAdditionalProp(items)
-				}
-			}
-		}
-	}
 }

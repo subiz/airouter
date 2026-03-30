@@ -2038,5 +2038,41 @@
         }
       }
     }
+  },
+
+  "test_stop_after_tool_called_0": {
+    "api": {
+      "stop_after_tool_called": true,
+      "instruct": "You are a calculator. What is 1+1",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "top_p": 1
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "candidateCount": 1,
+        "temperature": 0.7,
+        "topP": 1
+      }
+    }
   }
 }

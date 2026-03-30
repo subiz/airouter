@@ -457,7 +457,7 @@ type CompletionInput struct {
 	Verbosity            string                        `json:"verbosity,omitempty"`
 	Stop                 []string                      `json:"stop,omitempty"`
 	Model                string                        `json:"model,omitempty"`
-	NoLog                bool                          `json:"-,omitempty"` // disable log
+	NoLog                bool                          `json:"-"` // disable log
 	Instruct             string                        `json:"instruct,omitempty"`
 	Messages             []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
 	MaxCompletionTokens  int                           `json:"max_completion_tokens,omitempty"`
@@ -868,10 +868,7 @@ type RerankInput struct {
 }
 
 func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord) (RerankOutput, error) {
-	records := []*RerankRecord{}
-	for _, r := range inrecords {
-		records = append(records, r)
-	}
+	records := append([]*RerankRecord{}, inrecords...)
 	// keeping thing determistic
 	sort.Slice(records, func(i, j int) bool {
 		titlei, titlej := records[i].Title, records[j].Title

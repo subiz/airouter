@@ -273,8 +273,8 @@ func TestChatCompletionFull(t *testing.T) {
 
 			for _, fn := range tc.Input.Tools {
 				if fn.Type == "function" {
-					fn.Function.Handler = func(ctx context.Context, arg, callid string, ctxm map[string]any) (string, bool) {
-						return fn.Output, false
+					fn.Function.Handler = func(ctx context.Context, arg, callid string, ctxm map[string]any) string {
+						return fn.Output
 					}
 				}
 			}
