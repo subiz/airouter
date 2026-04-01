@@ -468,6 +468,7 @@ type CompletionInput struct {
 	Temperature          float32                       `json:"temperature,omitempty"`
 	TopP                 float32                       `json:"top_p,omitempty"`
 	Tools                []OpenAITool                  `json:"tools,omitempty"`
+	ServiceTier          string                        `json:"service_tier,omitempty"` // [auto, default], flex, priority, scale
 	StopAfterToolCalled  bool                          `json:"stop_after_tool_called"`
 }
 

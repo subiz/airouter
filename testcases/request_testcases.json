@@ -2106,5 +2106,34 @@
         "topP": 1
       }
     }
+  },
+
+  "service_tier": {
+    "api": {
+      "instruct": "You are a calculator. What is 1+1",
+      "model": "gpt-4o-mini",
+      "service_tier": "flex"
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-4o-mini",
+      "service_tier": "flex"
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {}
+    }
   }
 }
