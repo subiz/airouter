@@ -1,11 +1,11 @@
 module github.com/subiz/airouter
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/subiz/executor/v2 v2.0.8
-	github.com/subiz/header v1.27.91
+	github.com/subiz/header v1.27.96
 	github.com/subiz/log v1.0.21
 	github.com/tidwall/sjson v1.2.5
 	google.golang.org/protobuf v1.36.11
@@ -49,8 +49,8 @@ require (
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260319201613-d00831a3d3e7 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401001100-f93e5f3e9f0f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401001100-f93e5f3e9f0f // indirect
 	google.golang.org/grpc v1.79.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 )
