@@ -327,7 +327,11 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 			log.EProvider(nil, "model", "completion", log.M{"_payload": output})
 	}
 	if response.Usage != nil {
-		response.Usage.KFpvCostUSD = CalculateCost(model, response.Usage)
+		tier := response.ServiceTier
+		if tier == "" {
+			tier = request.ServiceTier
+		}
+		response.Usage.KFpvCostUSD = CalculateCost(model, response.Usage, tier)
 	}
 	return response, err
 }
@@ -509,6 +513,14 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	if _, has := m["stop_after_tool_called"]; has {
 		delete(m, "stop_after_tool_called")
 		changed = true
+	}
+
+	if _, has := m["service_tier"]; has {
+		// service_tier parameter, this only applied to model gpt-5* or o3 or o4 mini, unsupported: the rest (gpt-4.1-mini)
+		if !(strings.HasPrefix(model, "gpt-5") || model == "o3" || model == "o4-mini") {
+			delete(m, "service_tier")
+			changed = true
+		}
 	}
 
 	if changed {
@@ -741,13 +753,20 @@ func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionI
 		// https://community.openai.com/t/temperature-in-gpt-5-models/1337133/4
 		request.Temperature = 1
 	}
+
+	if request.ServiceTier == "flex" {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 15*time.Minute)
+		defer cancel()
+	}
+
 	var err error
 	requestb, err := ToOpenAICompletionJSON(request)
 	if err != nil {
 		return nil, err
 	}
 	url := "https://api.openai.com/v1/chat/completions"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
 		return nil, log.EServer(err)
 	}

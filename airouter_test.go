@@ -332,9 +332,10 @@ func TestChatCompletionFull(t *testing.T) {
 }
 
 type CostTestCase struct {
-	Cost  int64  `json:"cost"`
-	Model string `json:"model"`
-	Usage *Usage `json:"usage"`
+	Cost        int64  `json:"cost"`
+	Model       string `json:"model"`
+	Usage       *Usage `json:"usage"`
+	ServiceTier string `json:"service_tier"`
 }
 
 func TestCost(t *testing.T) {
@@ -351,12 +352,22 @@ func TestCost(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			output := CalculateCost(tc.Model, tc.Usage)
+			output := CalculateCost(tc.Model, tc.Usage, tc.ServiceTier)
 			if output != tc.Cost {
 				t.Errorf("Testcase %s, expect %d, got %d", name, tc.Cost, output)
 			}
 		})
 	}
+
+	// Manual test for flex
+	t.Run("flex_discount", func(t *testing.T) {
+		usage := &Usage{PromptTokens: 1000, CompletionTokens: 1000}
+		costRegular := CalculateCost("gpt-4o", usage, "")
+		costFlex := CalculateCost("gpt-4o", usage, "flex")
+		if costFlex != costRegular/2 {
+			t.Errorf("Flex cost should be half of regular cost, got regular %d, flex %d", costRegular, costFlex)
+		}
+	})
 }
 
 // ResponseTestCase is a struct for a single test case from the JSON file.

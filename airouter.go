@@ -34,6 +34,8 @@ const Gpt_4_1_nano = "gpt-4.1-nano"
 const Gpt_4_1 = "gpt-4.1"
 const Gpt_5_4_nano = "gpt-5.4-nano"
 const Gpt_5_4_mini = "gpt-5.4-mini"
+const O3 = "o3"
+const O4_mini = "o4-mini"
 
 const Gemini_2_5_pro = "gemini-2.5-pro"
 const Gemini_2_5_flash = "gemini-2.5-flash"
@@ -89,6 +91,14 @@ func ToModel(model string) string {
 		return Gpt_5_4_mini
 	}
 
+	if model == O3 || strings.HasPrefix(model, "o3-2") {
+		return O3
+	}
+
+	if model == O4_mini || strings.HasPrefix(model, "o4-mini-2") {
+		return O4_mini
+	}
+
 	// fallback for gpt
 	if strings.HasPrefix(model, "gpt") {
 		return Gpt_4o_mini
@@ -107,7 +117,7 @@ func ToModel(model string) string {
 	}
 
 	if model == "gemini-2.0-flash" {
-		return Gemini_3_1_flash_lite
+		return Gemini_2_5_flash_lite
 	}
 
 	if model == "gemini-2.5-flash-lite" {
@@ -123,7 +133,7 @@ func ToModel(model string) string {
 	}
 
 	if strings.HasPrefix(model, "gemini") {
-		return Gemini_3_1_flash_lite
+		return Gemini_2_5_flash_lite
 	}
 	return Gpt_4o_mini
 }
@@ -379,7 +389,7 @@ type OpenAIChatResponse struct {
 }
 
 // return 1000 usd fpv
-func CalculateCost(model string, usage *Usage) int64 {
+func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 	if usage == nil {
 		return 0
 	}
@@ -407,9 +417,13 @@ func CalculateCost(model string, usage *Usage) int64 {
 		cachedtoken = usage.PromptTokensDetails.CachedTokens
 	}
 	outputtoken := usage.CompletionTokens
-	return int64(math.Ceil(1000 * (float64(inputtoken)*llmmodelinputprice[ToModel(model)] +
+	cost := 1000 * (float64(inputtoken)*llmmodelinputprice[ToModel(model)] +
 		float64(cachedtoken)*llmmodelcachedprice[ToModel(model)] +
-		float64(outputtoken)*llmmodeloutputprice[ToModel(model)])))
+		float64(outputtoken)*llmmodeloutputprice[ToModel(model)])
+	if service_tier == "flex" {
+		cost = cost / 2
+	}
+	return int64(math.Ceil(cost))
 }
 
 type EmbeddingOutput struct {

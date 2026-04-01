@@ -2108,7 +2108,36 @@
     }
   },
 
-  "service_tier": {
+  "service_tier_support": {
+    "api": {
+      "instruct": "You are a calculator. What is 1+1",
+      "model": "gpt-5-mini",
+      "service_tier": "flex"
+    },
+    "openai": {
+      "messages": [
+        { "role": "system", "content": "You are a calculator. What is 1+1" }
+      ],
+      "model": "gpt-5-mini",
+      "service_tier": "flex"
+    },
+    "gemini": {
+      "model": "models/gemini-3.1-flash-lite-preview",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a calculator. What is 1+1"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {}
+    }
+  },
+
+  "service_tier_notsupport": {
     "api": {
       "instruct": "You are a calculator. What is 1+1",
       "model": "gpt-4o-mini",
@@ -2118,8 +2147,7 @@
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
-      "model": "gpt-4o-mini",
-      "service_tier": "flex"
+      "model": "gpt-4o-mini"
     },
     "gemini": {
       "model": "models/gemini-3.1-flash-lite-preview",
