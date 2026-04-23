@@ -1133,7 +1133,7 @@
           "content": "Bạn ơi cho mình hỏi mình muốn in hóa đơn bán ra một loạt thi lam ntn"
         }
       ],
-      "model": "gpt-4o-mini",
+      "model": "gpt-5-nano",
       "top_p": 1,
       "tools": [
         {
@@ -1177,7 +1177,7 @@
           ]
         }
       ],
-      "model": "models/gemini-3.1-flash-lite-preview"
+      "model": "models/gemini-2.5-flash-lite"
     }
   },
   "11": {
@@ -2162,6 +2162,168 @@
         }
       ],
       "generationConfig": {}
+    }
+  },
+  "real_44": {
+    "api": {
+      "verbosity": "low",
+      "model": "gemini-2.5-flash",
+      "instruct": "hi",
+      "messages": [
+        {
+          "role": "user",
+          "content": "ok"
+        }
+      ],
+      "reasoning_effort": "low",
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_search",
+            "description": "Search",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "english_terms": {
+                  "type": "array",
+                  "description": "Terms (in english) to search using term-search. Generate maximum 5 short terms",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "full_context_query": {
+                  "type": "string",
+                  "description": "user request or extracted topic to search for, this will be used as a query to search"
+                },
+                "style_requirement": {
+                  "type": "string",
+                  "description": "(optional) The user's requirements regarding writing style, length, and answer structure"
+                },
+                "vietnamese_terms": {
+                  "type": "array",
+                  "description": "Terms (in vietnamese) to search using term-search. Generate maximum 5 short terms",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "full_context_query",
+                "english_terms",
+                "vietnamese_terms"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "openai": {
+      "model": "gpt-4.1-mini",
+      "messages": [
+        {
+          "role": "system",
+          "content": "hi"
+        },
+        {
+          "role": "user",
+          "content": "ok"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "system_search",
+            "description": "Search",
+            "parameters": {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "english_terms": {
+                  "additionalProperties": false,
+                  "type": "array",
+                  "description": "Terms (in english) to search using term-search. Generate maximum 5 short terms",
+                  "items": {
+                    "additionalProperties": false,
+                    "type": "string"
+                  }
+                },
+                "full_context_query": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "user request or extracted topic to search for, this will be used as a query to search"
+                },
+                "style_requirement": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "(optional) The user's requirements regarding writing style, length, and answer structure"
+                },
+                "vietnamese_terms": {
+                  "additionalProperties": false,
+                  "type": "array",
+                  "description": "Terms (in vietnamese) to search using term-search. Generate maximum 5 short terms",
+                  "items": {
+                    "additionalProperties": false,
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "full_context_query",
+                "english_terms",
+                "vietnamese_terms"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "gemini": {
+      "contents": [{ "parts": [{ "text": "ok" }], "role": "user" }],
+      "generationConfig": {
+        "thinkingConfig": { "includeThoughts": false, "thinkingBudget": 256 }
+      },
+      "model": "models/gemini-2.5-flash",
+      "systemInstruction": { "parts": [{ "text": "hi" }] },
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "description": "Search",
+              "name": "system_search",
+              "parameters": {
+                "properties": {
+                  "english_terms": {
+                    "description": "Terms (in english) to search using term-search. Generate maximum 5 short terms",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "full_context_query": {
+                    "description": "user request or extracted topic to search for, this will be used as a query to search",
+                    "type": "string"
+                  },
+                  "style_requirement": {
+                    "description": "(optional) The user's requirements regarding writing style, length, and answer structure",
+                    "type": "string"
+                  },
+                  "vietnamese_terms": {
+                    "description": "Terms (in vietnamese) to search using term-search. Generate maximum 5 short terms",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "required": [
+                  "full_context_query",
+                  "english_terms",
+                  "vietnamese_terms"
+                ],
+                "type": "object"
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }

@@ -538,22 +538,7 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		decl := &GeminiFunctionDeclaration{
 			Name:        tool.Function.Name,
 			Description: tool.Function.Description,
-		}
-
-		if tool.Function.Parameters != nil {
-			properties := make(map[string]*header.JSONSchema)
-			for key, prop := range tool.Function.Parameters.Properties {
-				properties[key] = &header.JSONSchema{
-					Type:        prop.Type,
-					Description: prop.Description,
-				}
-			}
-
-			decl.Parameters = &header.JSONSchema{
-				Type:       "object",
-				Properties: properties,
-				Required:   tool.Function.Parameters.Required,
-			}
+			Parameters:  tool.Function.Parameters,
 		}
 
 		geminiTools = append(geminiTools, &GeminiTool{FunctionDeclarations: []*GeminiFunctionDeclaration{decl}})
