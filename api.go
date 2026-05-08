@@ -558,7 +558,8 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		budget := 0
 		switch req.ReasoningEffort {
 		case "minimal", "low":
-			budget = 256
+			// {"error":{"message":"The thinking budget 256 is invalid. Please choose a value between 512 and 24576.","type":"invalid_request_error","param":""}}
+			budget = 512
 		case "medium":
 			budget = 1024
 		case "high", "xhigh":

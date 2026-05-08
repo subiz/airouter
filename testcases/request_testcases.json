@@ -2282,7 +2282,7 @@
     "gemini": {
       "contents": [{ "parts": [{ "text": "ok" }], "role": "user" }],
       "generationConfig": {
-        "thinkingConfig": { "includeThoughts": false, "thinkingBudget": 256 }
+        "thinkingConfig": { "includeThoughts": false, "thinkingBudget": 512 }
       },
       "model": "models/gemini-2.5-flash",
       "systemInstruction": { "parts": [{ "text": "hi" }] },
