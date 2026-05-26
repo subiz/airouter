@@ -41,7 +41,7 @@ const Gemini_2_5_pro = "gemini-2.5-pro"
 const Gemini_2_5_flash = "gemini-2.5-flash"
 const Gemini_2_5_flash_lite = "gemini-2.5-flash-lite"
 
-const Gemini_3_1_flash_lite = "gemini-3.1-flash-lite-preview"
+const Gemini_3_1_flash_lite = "gemini-3.1-flash-lite"
 
 const Text_embedding_3_small = "text-embedding-3-small"
 const Text_embedding_3_large = "text-embedding-3-large"
@@ -225,14 +225,12 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-5.4-nano": 0.2,
 	"gpt-5.4-mini": 0.75,
 
-	"gemini-2.0-flash":              0.1,
-	"gemini-2.5-flash":              0.3,
-	"gemini-3-flash":                0.5,
-	"gemini-2.0-flash-lite":         0.075,
-	"gemini-2.5-flash-lite":         0.1,
-	"gemini-3.1-flash-lite":         0.25,
-	"gemini-3.1-flash-lite-preview": 0.25,
-	"gemini-2.5-pro":                2.5,
+	"gemini-2.5-flash":      0.3,
+	"gemini-3-flash":        0.5,
+	"gemini-2.5-flash-lite": 0.1,
+	"gemini-3.1-flash-lite": 0.25,
+	"gemini-2.5-pro":        2.5,
+	"gemini-3.5-flash":      1.5,
 }
 
 // per 1M tokens
@@ -248,13 +246,11 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-5.4-nano": 1.25,
 	"gpt-5.4-mini": 4.5,
 
-	"gemini-2.0-flash-lite":         0.3,
-	"gemini-2.5-flash-lite":         0.4,
-	"gemini-3.1-flash-lite":         1.5,
-	"gemini-3.1-flash-lite-preview": 1.5,
-	"gemini-2.0-flash":              0.4,
-	"gemini-2.5-flash":              2.5,
-	"gemini-2.5-pro":                15,
+	"gemini-2.5-flash-lite": 0.4,
+	"gemini-3.1-flash-lite": 1.5,
+	"gemini-2.5-flash":      2.5,
+	"gemini-2.5-pro":        15,
+	"gemini-3.5-flash":      9,
 }
 
 // per 1M tokens
@@ -270,15 +266,11 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-5.4-nano": 0.02,
 	"gpt-5.4-mini": 0.075,
 
-	"gemini-2.0-flash": 0.1, // no caching
-	"gemini-2.5-flash": 0.225,
-
-	"gemini-2.0-flash-lite":         0.075, // no caching
-	"gemini-2.5-flash-lite":         0.25,
-	"gemini-3.1-flash-lite":         0.025,
-	"gemini-3.1-flash-lite-preview": 0.025,
-
-	"gemini-2.5-pro": 11.25,
+	"gemini-2.5-flash":      0.03,
+	"gemini-2.5-flash-lite": 0.01,
+	"gemini-3.1-flash-lite": 0.025,
+	"gemini-2.5-pro":        11.25,
+	"gemini-3.5-flash":      0.15,
 }
 
 // OpenAIChatMessage mimics the structure of a message in an OpenAI Chat Completion request.
