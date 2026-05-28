@@ -24,6 +24,8 @@ import (
 
 var BACKEND = "https://api.subiz.com.vn/4.1/ai"
 
+var USDTOVND int64 = 26344
+
 const Gpt_4o_mini = "gpt-4o-mini"
 const Gpt_4o = "gpt-4o"
 const Gpt_4_1_mini = "gpt-4.1-mini"
@@ -506,6 +508,11 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 	var totalCost float64
 	tokenUsages := []*Usage{}
 
+	// Retrieve the value and assert it as a string
+	accid, _ := ctx.Value("account_id").(string)
+	convoid, _ := ctx.Value("conversation_id").(string)
+
+	cachehit := "HIT"
 	turn := 0
 	for range 8 { // max 5 loops
 		if turn >= 6 {
@@ -513,10 +520,6 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 			input.Tools = nil
 		}
 		turn++
-
-		// Retrieve the value and assert it as a string
-		accid, _ := ctx.Value("account_id").(string)
-		convoid, _ := ctx.Value("conversation_id").(string)
 
 		// send to subiz server
 		q := neturl.Values{}
@@ -553,13 +556,8 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 				log.Err(accid, err, "CANNOT CACHE")
 			}
 		}
-
-		if !input.NoLog {
-			cachehit := "HIT"
-			if len(cache) == 0 {
-				cachehit = "MISS"
-			}
-			log.Info(accid, log.Stack(), "LLM", cachehit, convoid, md5sum, string(requestbody))
+		if len(cache) == 0 {
+			cachehit = "MISS"
 		}
 
 		if len(cache) > 0 {
@@ -669,6 +667,11 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
 		totalprice.USD += int64(totalCost * 1000)
 	}
+
+	if !input.NoLog {
+		log.Info(accid, log.Stack(), "LLM", cachehit, totalCost, completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ", convoid, string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
+	}
+
 	return completionoutput.Content, completionoutput, nil
 }
 
