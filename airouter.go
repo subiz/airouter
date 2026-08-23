@@ -45,11 +45,18 @@ const Gemini_2_5_flash_lite = "gemini-2.5-flash-lite"
 
 const Gemini_3_1_flash_lite = "gemini-3.1-flash-lite"
 
+const Gemma_4_31b_it = "gemma-4-31b-it"
+const Gemma_4_26b_a4b_it = "gemma-4-26b-a4b-it"
+
 const Text_embedding_3_small = "text-embedding-3-small"
 const Text_embedding_3_large = "text-embedding-3-large"
 const Text_embedding_ada_002 = "text-embedding-ada-002"
 
 const Gemini_embedding_001 = "gemini-embedding-001"
+
+func isGoogleChatModel(model string) bool {
+	return strings.HasPrefix(model, "gemini") || strings.HasPrefix(model, "gemma")
+}
 
 // ToModel converts model to the closest standardized model
 func ToModel(model string) string {
@@ -134,8 +141,19 @@ func ToModel(model string) string {
 		return Gemini_2_5_pro
 	}
 
+	if model == "gemma-4-31b" || model == "gemma-4-31b-it" {
+		return Gemma_4_31b_it
+	}
+
+	if model == "gemma-4-26b-a4b" || model == "gemma-4-26b-a4b-it" {
+		return Gemma_4_26b_a4b_it
+	}
+
 	if strings.HasPrefix(model, "gemini") {
 		return Gemini_2_5_flash_lite
+	}
+	if strings.HasPrefix(model, "gemma") {
+		return Gemma_4_26b_a4b_it
 	}
 	return Gpt_4o_mini
 }
@@ -160,7 +178,7 @@ func ToGeminiModel(model string) string {
 		return Gemini_2_5_flash
 	}
 
-	if !strings.HasPrefix(model, "gemini") {
+	if !isGoogleChatModel(model) {
 		return Gemini_2_5_flash
 	}
 	return model
@@ -191,7 +209,7 @@ func ToOpenAIModel(model string) string {
 	}
 
 	// fallback for gemini
-	if strings.HasPrefix(model, "gemini") {
+	if isGoogleChatModel(model) {
 		return Gpt_4o_mini
 	}
 
@@ -207,7 +225,7 @@ func GetFallbackChatModel(model string) string {
 		return ToGeminiModel(model)
 	}
 
-	if strings.HasPrefix(model, "gemini") {
+	if isGoogleChatModel(model) {
 		return ToOpenAIModel(model)
 	}
 
@@ -233,6 +251,8 @@ var llmmodelinputprice = map[string]float64{
 	"gemini-3.1-flash-lite": 0.25,
 	"gemini-2.5-pro":        2.5,
 	"gemini-3.5-flash":      1.5,
+	"gemma-4-31b-it":        0.15,
+	"gemma-4-26b-a4b-it":    0.15,
 }
 
 // per 1M tokens
@@ -253,6 +273,8 @@ var llmmodeloutputprice = map[string]float64{
 	"gemini-2.5-flash":      2.5,
 	"gemini-2.5-pro":        15,
 	"gemini-3.5-flash":      9,
+	"gemma-4-31b-it":        0.6,
+	"gemma-4-26b-a4b-it":    0.6,
 }
 
 // per 1M tokens
@@ -273,6 +295,17 @@ var llmmodelcachedprice = map[string]float64{
 	"gemini-3.1-flash-lite": 0.025,
 	"gemini-2.5-pro":        11.25,
 	"gemini-3.5-flash":      0.15,
+	"gemma-4-31b-it":        0.015,
+	"gemma-4-26b-a4b-it":    0.015,
+}
+
+var llmmodelcontextlength = map[string]int{
+	"gemma-4-31b-it":     256000,
+	"gemma-4-26b-a4b-it": 256000,
+}
+
+func GetModelContextLength(model string) int {
+	return llmmodelcontextlength[ToModel(model)]
 }
 
 // OpenAIChatMessage mimics the structure of a message in an OpenAI Chat Completion request.

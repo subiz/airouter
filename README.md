@@ -122,7 +122,9 @@ func main() {
 | Provider | Model Aliases |
 |----------|---------------|
 | **OpenAI** | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano` |
-| **Google** | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-3.1-flash-lite-preview` |
+| **Google** | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-3.1-flash-lite-preview`, `gemma-4-31b-it`, `gemma-4-26b-a4b-it` |
+
+Gemma 4 aliases `gemma-4-31b` and `gemma-4-26b-a4b` are normalized to the Gemini API model IDs `gemma-4-31b-it` and `gemma-4-26b-a4b-it`. Both Gemma 4 models have a 256K token context length.
 
 ### Text Embedding
 

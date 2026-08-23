@@ -94,6 +94,59 @@ func TestRequestConversion(t *testing.T) {
 	}
 }
 
+func TestModelAliases(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantModel    string
+		wantGemini   string
+		wantFallback string
+		wantContext  int
+	}{
+		{
+			name:         "gemma 4 31b alias",
+			input:        "gemma-4-31b",
+			wantModel:    Gemma_4_31b_it,
+			wantGemini:   Gemma_4_31b_it,
+			wantFallback: Gpt_4o_mini,
+			wantContext:  256000,
+		},
+		{
+			name:         "gemma 4 26b a4b alias",
+			input:        "gemma-4-26b-a4b",
+			wantModel:    Gemma_4_26b_a4b_it,
+			wantGemini:   Gemma_4_26b_a4b_it,
+			wantFallback: Gpt_4o_mini,
+			wantContext:  256000,
+		},
+		{
+			name:         "gemma 4 26b a4b official",
+			input:        Gemma_4_26b_a4b_it,
+			wantModel:    Gemma_4_26b_a4b_it,
+			wantGemini:   Gemma_4_26b_a4b_it,
+			wantFallback: Gpt_4o_mini,
+			wantContext:  256000,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ToModel(tc.input); got != tc.wantModel {
+				t.Fatalf("ToModel(%q) = %q, want %q", tc.input, got, tc.wantModel)
+			}
+			if got := ToGeminiModel(tc.input); got != tc.wantGemini {
+				t.Fatalf("ToGeminiModel(%q) = %q, want %q", tc.input, got, tc.wantGemini)
+			}
+			if got := GetFallbackChatModel(tc.input); got != tc.wantFallback {
+				t.Fatalf("GetFallbackChatModel(%q) = %q, want %q", tc.input, got, tc.wantFallback)
+			}
+			if got := GetModelContextLength(tc.input); got != tc.wantContext {
+				t.Fatalf("GetModelContextLength(%q) = %d, want %d", tc.input, got, tc.wantContext)
+			}
+		})
+	}
+}
+
 // ResponseTestCase is a struct for a single test case from the JSON file.
 type ResponseTestCase struct {
 	Gemini *GeminiAPIResponse  `json:"gemini"`

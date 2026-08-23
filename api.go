@@ -308,7 +308,7 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 		model = Gpt_4o_mini // default
 	}
 
-	if strings.HasPrefix(model, "gemini") {
+	if isGoogleChatModel(model) {
 		apikey := _geminiapikey
 		output, err = chatCompleteGemini(ctx, apikey, request)
 	} else {
