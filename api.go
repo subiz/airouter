@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -533,6 +534,7 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 
 // ToGeminiRequestJSON converts an OpenAIChatRequest to a Gemini-compatible JSON request string.
 func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
+	geminiModel := ToGeminiModel(req.Model)
 	var geminiTools []*GeminiTool
 	for _, tool := range req.Tools {
 		decl := &GeminiFunctionDeclaration{
@@ -545,7 +547,7 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 	}
 
 	geminiReq := GeminiRequest{
-		Model: "models/" + ToGeminiModel(req.Model),
+		Model: "models/" + geminiModel,
 		GenerationConfig: &GeminiGenerationConfig{
 			Seed:        req.Seed,
 			Temperature: req.Temperature,
@@ -554,7 +556,7 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		Tools: geminiTools,
 	}
 
-	if req.ReasoningEffort != "" && req.ReasoningEffort != "none" {
+	if req.ReasoningEffort != "" && req.ReasoningEffort != "none" && !strings.HasPrefix(geminiModel, "gemma-4-") {
 		budget := 0
 		switch req.ReasoningEffort {
 		case "minimal", "low":
@@ -719,6 +721,8 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		geminiReq.Contents = contents
 	}
 
+	trimGeminiRequestContext(&geminiReq, GetModelContextLength(geminiModel), req.MaxCompletionTokens)
+
 	if len(req.Stop) > 0 {
 		geminiReq.GenerationConfig.StopSequences = req.Stop
 		if len(geminiReq.GenerationConfig.StopSequences) > 5 {
@@ -730,6 +734,102 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal Gemini request: %w", err)
 	}
 	return b, nil
+}
+
+func trimGeminiRequestContext(req *GeminiRequest, contextLength, maxOutputTokens int) {
+	if req == nil || contextLength <= 0 {
+		return
+	}
+
+	reservedOutputTokens := maxOutputTokens
+	if reservedOutputTokens <= 0 {
+		reservedOutputTokens = 8192
+	}
+	maxInputTokens := contextLength - reservedOutputTokens - 1024
+	if maxInputTokens <= 0 {
+		maxInputTokens = contextLength
+	}
+
+	for estimateGeminiRequestTokens(req) > maxInputTokens && len(req.Contents) > 1 {
+		req.Contents = req.Contents[1:]
+	}
+
+	for estimateGeminiRequestTokens(req) > maxInputTokens && len(req.Contents) > 0 {
+		overflowTokens := estimateGeminiRequestTokens(req) - maxInputTokens
+		trimGeminiContentText(req.Contents[0], overflowTokens)
+		if overflowTokens <= 1 {
+			break
+		}
+	}
+}
+
+func estimateGeminiRequestTokens(req *GeminiRequest) int {
+	if req == nil {
+		return 0
+	}
+
+	tokens := estimateGeminiContentTokens(req.SystemInstruction)
+	for _, content := range req.Contents {
+		tokens += estimateGeminiContentTokens(content)
+	}
+	return tokens
+}
+
+func estimateGeminiContentTokens(content *GeminiContent) int {
+	if content == nil {
+		return 0
+	}
+
+	tokens := 4
+	for _, part := range content.Parts {
+		if part == nil {
+			continue
+		}
+		if part.Text != nil {
+			tokens += estimateTextTokens(*part.Text)
+		}
+		if part.FunctionCall != nil {
+			b, _ := json.Marshal(part.FunctionCall)
+			tokens += estimateTextTokens(string(b))
+		}
+		if part.FunctionResponse != nil {
+			b, _ := json.Marshal(part.FunctionResponse)
+			tokens += estimateTextTokens(string(b))
+		}
+		if part.InlineData != nil {
+			tokens += 1024
+		}
+	}
+	return tokens
+}
+
+func estimateTextTokens(text string) int {
+	if text == "" {
+		return 0
+	}
+	return int(math.Ceil(float64(utf8.RuneCountInString(text)) / 3.0))
+}
+
+func trimGeminiContentText(content *GeminiContent, overflowTokens int) {
+	if content == nil || overflowTokens <= 0 {
+		return
+	}
+
+	trimRunes := overflowTokens * 3
+	for _, part := range content.Parts {
+		if part == nil || part.Text == nil || *part.Text == "" {
+			continue
+		}
+		text := *part.Text
+		runes := []rune(text)
+		if len(runes) <= trimRunes {
+			*part.Text = ""
+			trimRunes -= len(runes)
+			continue
+		}
+		*part.Text = string(runes[trimRunes:])
+		return
+	}
 }
 
 func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionInput) ([]byte, error) {

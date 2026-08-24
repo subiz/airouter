@@ -147,6 +147,67 @@ func TestModelAliases(t *testing.T) {
 	}
 }
 
+func TestGemmaRequestConversion(t *testing.T) {
+	req := CompletionInput{
+		Model:           Gemma_4_31b_it,
+		Instruct:        "Answer the customer using ONLY the collected data.",
+		ReasoningEffort: "low",
+		Messages: []*header.LLMChatHistoryEntry{{
+			Role:    "user",
+			Content: "Customer query: Co deal doc quyen cho tour Bac Kinh khong?",
+		}},
+	}
+
+	actualJSON, err := ToGeminiRequestJSON(req)
+	if err != nil {
+		t.Fatalf("ToGeminiRequestJSON failed: %v", err)
+	}
+
+	var actual map[string]any
+	if err := json.Unmarshal(actualJSON, &actual); err != nil {
+		t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+	}
+	if got := actual["model"]; got != "models/"+Gemma_4_31b_it {
+		t.Fatalf("model = %v, want %q", got, "models/"+Gemma_4_31b_it)
+	}
+	if generationConfig, _ := actual["generationConfig"].(map[string]any); generationConfig["thinkingConfig"] != nil {
+		t.Fatalf("Gemma 4 request should not include thinkingConfig, got %v", generationConfig["thinkingConfig"])
+	}
+}
+
+func TestGemmaRequestTrimsLongContext(t *testing.T) {
+	longContent := strings.Repeat("a", 900000)
+	req := CompletionInput{
+		Model: Gemma_4_31b_it,
+		Messages: []*header.LLMChatHistoryEntry{
+			{Role: "user", Content: strings.Repeat("old ", 1000)},
+			{Role: "user", Content: longContent},
+		},
+	}
+
+	actualJSON, err := ToGeminiRequestJSON(req)
+	if err != nil {
+		t.Fatalf("ToGeminiRequestJSON failed: %v", err)
+	}
+
+	var actual GeminiRequest
+	if err := json.Unmarshal(actualJSON, &actual); err != nil {
+		t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+	}
+	if tokens := estimateGeminiRequestTokens(&actual); tokens > GetModelContextLength(Gemma_4_31b_it)-8192-1024 {
+		t.Fatalf("estimated tokens = %d, want <= %d", tokens, GetModelContextLength(Gemma_4_31b_it)-8192-1024)
+	}
+	if len(actual.Contents) != 1 {
+		t.Fatalf("expected old messages to be trimmed, got %d contents", len(actual.Contents))
+	}
+	if len(actual.Contents[0].Parts) == 0 || actual.Contents[0].Parts[0].Text == nil {
+		t.Fatalf("expected remaining content text")
+	}
+	if len(*actual.Contents[0].Parts[0].Text) >= len(longContent) {
+		t.Fatalf("expected long content to be truncated")
+	}
+}
+
 // ResponseTestCase is a struct for a single test case from the JSON file.
 type ResponseTestCase struct {
 	Gemini *GeminiAPIResponse  `json:"gemini"`
