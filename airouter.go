@@ -601,7 +601,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		}
 
 		if len(cache) == 0 {
-			resp, output, err := sendPOST(url, _apikey, requestbody)
+			resp, output, err := sendPOST(ctx, url, _apikey, requestbody)
 			if err != nil {
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
 			}
@@ -773,7 +773,7 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	}
 
 	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
-	resp, resoutput, err := sendPOST(url, _apikey, []byte(text))
+	resp, resoutput, err := sendPOST(ctx, url, _apikey, []byte(text))
 	if err != nil {
 		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
 	}
@@ -804,13 +804,13 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	return embeddingoutput.Vector, embeddingoutput, nil
 }
 
-func sendPOST(url, token string, payload []byte) (*http.Response, []byte, error) {
+func sendPOST(ctx context.Context, url, token string, payload []byte) (*http.Response, []byte, error) {
 	if strings.HasPrefix(url, "https://test/") {
 		status, body := FakeBackend(url, payload)
 		return &http.Response{StatusCode: status}, body, nil
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -989,7 +989,7 @@ func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord)
 		}
 	}
 
-	resp, resoutput, err := sendPOST(url, _apikey, payload)
+	resp, resoutput, err := sendPOST(ctx, url, _apikey, payload)
 	if err != nil {
 		return RerankOutput{}, log.EProvider(err, "gemini", "reranking")
 	}
