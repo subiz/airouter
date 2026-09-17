@@ -49,7 +49,8 @@ func main() {
     airouter.Init("YOUR_SUBIZ_API_KEY")
 
     ctx := context.Background()
-    output, _, err := airouter.Complete(ctx, airouter.CompletionInput{
+	accid := "your-account-id"
+    output, _, err := airouter.Complete(ctx, accid, airouter.CompletionInput{
         Model: airouter.Gpt_5_nano,
         ReasoningEffort: "low",
         Instruct: "Tell a short story about a brave dragon.",

@@ -15,7 +15,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -51,7 +51,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -94,7 +94,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -133,7 +133,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "systemInstruction": {
         "parts": [
           {
@@ -278,7 +278,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "systemInstruction": {
         "parts": [
           {
@@ -431,7 +431,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -562,7 +562,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "systemInstruction": {
         "parts": [
           {
@@ -733,7 +733,7 @@
       ]
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "systemInstruction": {
         "parts": [
           {
@@ -893,7 +893,7 @@
         }
       ],
       "generationConfig": {},
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "systemInstruction": { "parts": [{ "text": "Hi" }] }
     }
   },
@@ -918,7 +918,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -978,7 +978,7 @@
         "temperature": 0,
         "topP": 1
       },
-      "model": "models/gemini-3.1-flash-lite-preview"
+      "model": "models/gemini-3.1-flash-lite"
     }
   },
   "with_response_format_1": {
@@ -1094,7 +1094,7 @@
           "type": "object"
         }
       },
-      "model": "models/gemini-3.1-flash-lite-preview"
+      "model": "models/gemini-3.1-flash-lite"
     }
   },
   "10": {
@@ -1558,7 +1558,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -1698,7 +1698,7 @@
       "model": "gpt-4o-mini"
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "systemInstruction": {
         "parts": [{ "text": "You are a calculator. What is 1+1" }]
       },
@@ -1795,7 +1795,7 @@
       "max_completion_tokens": 100
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [{ "text": "Tell me a very long story about a dragon." }],
@@ -1829,7 +1829,7 @@
       "model": "gpt-4o-mini"
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "generationConfig": {},
       "contents": [
         {
@@ -1862,7 +1862,7 @@
       "verbosity": "low"
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "generationConfig": {},
       "contents": [
         {
@@ -1891,7 +1891,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -1929,7 +1929,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -2089,7 +2089,7 @@
       "top_p": 1
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -2122,7 +2122,7 @@
       "service_tier": "flex"
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [
@@ -2150,7 +2150,7 @@
       "model": "gpt-4o-mini"
     },
     "gemini": {
-      "model": "models/gemini-3.1-flash-lite-preview",
+      "model": "models/gemini-3.1-flash-lite",
       "contents": [
         {
           "parts": [

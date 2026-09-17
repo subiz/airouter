@@ -621,7 +621,7 @@
         {
           "message": {
             "role": "assistant",
-							"content": "Tôi rất tiếc, , tôi không thể giúp bạn in hóa đơn. Tôi chỉ có thể giúp bạn chuyển cuộc trò chuyện cho một người thật. Bạn có muốn điều đó không?\n"
+            "content": "Tôi rất tiếc, , tôi không thể giúp bạn in hóa đơn. Tôi chỉ có thể giúp bạn chuyển cuộc trò chuyện cho một người thật. Bạn có muốn điều đó không?\n"
           },
           "finish_reason": "stop"
         }
@@ -806,7 +806,7 @@
           "index": 0,
           "message": {
             "role": "assistant",
-            "content": "{\"steps\": [{\"action\": \"greet\", \"parameters\": []}], \"strategy\": \"respond to greeting\"}"
+            "content": "{\"sterategy\":\"Greeting the user\",\"steps\":[{\"action\":\"greet\",\"parameters\":[]}]"
           },
           "finish_reason": "stop"
         }

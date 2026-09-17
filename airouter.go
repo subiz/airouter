@@ -464,6 +464,7 @@ type EmbeddingOutput struct {
 
 type CompletionOutput struct {
 	Content           string `json:"content"`
+	FinishReason      string `json:"finish_reason,omitempty"`
 	Refusal           string `json:"refusal"`
 	Request           []byte `json:"request"`
 	InputTokens       int64  `json:"input_tokens"`
@@ -513,7 +514,7 @@ type CompletionInput struct {
 	StopAfterToolCalled  bool                          `json:"stop_after_tool_called"`
 }
 
-func Complete(ctx context.Context, input CompletionInput) (string, CompletionOutput, error) {
+func Complete(ctx context.Context, accid string, input CompletionInput) (string, CompletionOutput, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -542,7 +543,6 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 	tokenUsages := []*Usage{}
 
 	// Retrieve the value and assert it as a string
-	accid, _ := ctx.Value("account_id").(string)
 	convoid, _ := ctx.Value("conversation_id").(string)
 
 	cachehit := "HIT"
@@ -601,7 +601,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 		}
 
 		if len(cache) == 0 {
-			resp, output, err := sendPOST(url, _apikey, requestbody)
+			resp, output, err := sendPOST(ctx, url, _apikey, requestbody)
 			if err != nil {
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
 			}
@@ -693,6 +693,7 @@ func Complete(ctx context.Context, input CompletionInput) (string, CompletionOut
 	}
 
 	if len(completion.Choices) > 0 {
+		completionoutput.FinishReason = completion.Choices[0].FinishReason
 		completionoutput.Refusal = completion.Choices[0].Message.Refusal
 		completionoutput.Content = completion.Choices[0].Message.GetContent()
 	}
@@ -773,7 +774,7 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	}
 
 	log.Info(accid, log.Stack(), "EMBEDDING", convoid, text, time.Since(te))
-	resp, resoutput, err := sendPOST(url, _apikey, []byte(text))
+	resp, resoutput, err := sendPOST(ctx, url, _apikey, []byte(text))
 	if err != nil {
 		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
 	}
@@ -804,13 +805,13 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	return embeddingoutput.Vector, embeddingoutput, nil
 }
 
-func sendPOST(url, token string, payload []byte) (*http.Response, []byte, error) {
+func sendPOST(ctx context.Context, url, token string, payload []byte) (*http.Response, []byte, error) {
 	if strings.HasPrefix(url, "https://test/") {
 		status, body := FakeBackend(url, payload)
 		return &http.Response{StatusCode: status}, body, nil
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -989,7 +990,7 @@ func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord)
 		}
 	}
 
-	resp, resoutput, err := sendPOST(url, _apikey, payload)
+	resp, resoutput, err := sendPOST(ctx, url, _apikey, payload)
 	if err != nil {
 		return RerankOutput{}, log.EProvider(err, "gemini", "reranking")
 	}

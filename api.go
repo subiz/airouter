@@ -1011,7 +1011,6 @@ func rerankingGemini(ctx context.Context, token string, request RerankInput) (*R
 		return nil, err
 	}
 
-	fmt.Println("GEMINIREQ", string(requestb), token)
 	url := "https://discoveryengine.googleapis.com/v1/projects/subiz-version-4/locations/global/rankingConfigs/default_ranking_config:rank"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {
@@ -1081,7 +1080,6 @@ func chatCompleteGemini(ctx context.Context, apikey string, request CompletionIn
 		return nil, err
 	}
 
-	fmt.Println("GEMINIREQ", string(requestb), apikey)
 	url := "https://generativelanguage.googleapis.com/v1beta/models/" + ToGeminiModel(model) + ":generateContent"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
 	if err != nil {

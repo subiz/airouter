@@ -293,7 +293,7 @@ func TestChatCompletion1(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
-	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
 	for name, tc := range testCases {
 		if name != "22" {
 			continue
@@ -370,10 +370,10 @@ func TestChatCompletionFull(t *testing.T) {
 	}
 
 	BACKEND = "https://test"
-	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
+			accid := "acpxkgumifuoofoosble"
 			b, _ := json.Marshal(tc.Input.ResponseFormat)
 			var resf *header.LLMResponseJSONSchemaFormat
 			if len(b) > 0 && string(b) != "null" {
@@ -393,7 +393,7 @@ func TestChatCompletionFull(t *testing.T) {
 				}
 			}
 
-			_, out, err := Complete(ctx, *tc.Input)
+			_, out, err := Complete(context.Background(), accid, *tc.Input)
 			if err != nil {
 				t.Fatalf("Failed to marshal expected response: %v", err)
 			}
@@ -503,7 +503,7 @@ func TestGetEmbedding(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test cases: %v", err)
 	}
 
-	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
@@ -548,9 +548,9 @@ func TestReadingSampleImage1(t *testing.T) {
 	imgdata := base64.StdEncoding.EncodeToString(data)
 
 	BACKEND = "https://test"
-	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
-	ctx := context.WithValue(context.Background(), "account_id", "acpxkgumifuoofoosble")
-	output, _, err := Complete(ctx, CompletionInput{
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
+	accid := "acpxkgumifuoofoosble"
+	output, _, err := Complete(context.Background(), accid, CompletionInput{
 		Model: "gpt-4.1-mini",
 		Messages: []*header.LLMChatHistoryEntry{{
 			Role: "user",
@@ -573,7 +573,7 @@ func TestReadingSampleImage1(t *testing.T) {
 		t.Fatalf("Should be 1, got: %s", output)
 	}
 
-	output, _, err = Complete(ctx, CompletionInput{
+	output, _, err = Complete(context.Background(), accid, CompletionInput{
 		Model: "gemini-2.5-flash",
 		Messages: []*header.LLMChatHistoryEntry{{
 			Role: "user",
@@ -656,7 +656,7 @@ func TestRerank(t *testing.T) {
 }
 
 func TestOpenAIMaxCompletionOutput(t *testing.T) {
-	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("OPENAI_API_KEY"))
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
 	ctx := context.Background()
 	BACKEND = "https://test"
 	maxTokens := 10
