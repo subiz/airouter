@@ -493,25 +493,26 @@ type CompletionReasoning struct {
 }
 
 type CompletionInput struct {
-	Seed                 int                           `json:"seed,omitempty"`
-	PromptCacheKey       string                        `json:"prompt_cache_key,omitempty"`
-	PromptCacheRetention string                        `json:"prompt_cache_retention,omitempty"`
-	Verbosity            string                        `json:"verbosity,omitempty"`
-	Stop                 []string                      `json:"stop,omitempty"`
-	Model                string                        `json:"model,omitempty"`
-	NoLog                bool                          `json:"-"` // disable log
-	Instruct             string                        `json:"instruct,omitempty"`
-	Messages             []*header.LLMChatHistoryEntry `json:"messages,omitempty"`
-	MaxCompletionTokens  int                           `json:"max_completion_tokens,omitempty"`
-	ResponseFormat       *ResponseFormat               `json:"response_format,omitempty"`
-	ToolChoice           string                        `json:"tool_choice,omitempty"`
-	Reasoning            *CompletionReasoning          `json:"reasoning,omitempty"`
-	ReasoningEffort      string                        `json:"reasoning_effort,omitempty"`
-	Temperature          float32                       `json:"temperature,omitempty"`
-	TopP                 float32                       `json:"top_p,omitempty"`
-	Tools                []OpenAITool                  `json:"tools,omitempty"`
-	ServiceTier          string                        `json:"service_tier,omitempty"` // [auto, default], flex, priority, scale
-	StopAfterToolCalled  bool                          `json:"stop_after_tool_called"`
+	Seed                 int                                 `json:"seed,omitempty"`
+	PromptCacheKey       string                              `json:"prompt_cache_key,omitempty"`
+	PromptCacheRetention string                              `json:"prompt_cache_retention,omitempty"`
+	Verbosity            string                              `json:"verbosity,omitempty"`
+	Stop                 []string                            `json:"stop,omitempty"`
+	Model                string                              `json:"model,omitempty"`
+	NoLog                bool                                `json:"-"` // disable log
+	Instruct             string                              `json:"instruct,omitempty"`
+	Messages             []*header.LLMChatHistoryEntry       `json:"messages,omitempty"`
+	MaxCompletionTokens  int                                 `json:"max_completion_tokens,omitempty"`
+	ResponseFormat       *ResponseFormat                     `json:"response_format,omitempty"` // @deprecated, use json_schema
+	JSONSchema           *header.LLMResponseJSONSchemaFormat `json:"json_schema,omitempty"`
+	ToolChoice           string                              `json:"tool_choice,omitempty"`
+	Reasoning            *CompletionReasoning                `json:"reasoning,omitempty"`
+	ReasoningEffort      string                              `json:"reasoning_effort,omitempty"`
+	Temperature          float32                             `json:"temperature,omitempty"`
+	TopP                 float32                             `json:"top_p,omitempty"`
+	Tools                []OpenAITool                        `json:"tools,omitempty"`
+	ServiceTier          string                              `json:"service_tier,omitempty"` // [auto, default], flex, priority, scale
+	StopAfterToolCalled  bool                                `json:"stop_after_tool_called"`
 }
 
 func Complete(ctx context.Context, accid string, input CompletionInput) (string, CompletionOutput, error) {
@@ -709,7 +710,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 	return completionoutput.Content, completionoutput, nil
 }
 
-func GetEmbedding(ctx context.Context, model string, text string) ([]float32, EmbeddingOutput, error) {
+func GetEmbedding(ctx context.Context, accid, model string, text string) ([]float32, EmbeddingOutput, error) {
 	defer header.KLock(text)()
 
 	text = strings.TrimSpace(text)
@@ -724,7 +725,6 @@ func GetEmbedding(ctx context.Context, model string, text string) ([]float32, Em
 	start := time.Now()
 	response := &OpenAIEmbeddingResponse{}
 	// Retrieve the value and assert it as a string
-	accid, _ := ctx.Value("account_id").(string)
 	convoid, _ := ctx.Value("conversation_id").(string)
 
 	te := time.Now()

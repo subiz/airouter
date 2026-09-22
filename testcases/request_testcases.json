@@ -1097,6 +1097,120 @@
       "model": "models/gemini-3.1-flash-lite"
     }
   },
+  "with_response_format_2": {
+    "api": {
+      "messages": [
+        {
+          "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
+          "role": "system"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "seed": 0,
+      "temperature": 0,
+      "top_p": 1,
+
+      "json_schema": {
+        "name": "intent",
+        "strict": true,
+        "schema": {
+          "additionalProperties": false,
+          "properties": {
+            "recipeName": {
+              "type": "string",
+              "description": "Name of the recipe"
+            },
+            "ingredients": {
+              "additionalProperties": false,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Ingredient description"
+              },
+              "description": "List of ingredients"
+            }
+          },
+          "required": ["recipeName", "ingredients"],
+          "type": "object"
+        }
+      }
+    },
+    "openai": {
+      "messages": [
+        {
+          "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
+          "role": "system"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "top_p": 1,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "intent",
+          "strict": true,
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "recipeName": {
+                "additionalProperties": false,
+                "type": "string",
+                "description": "Name of the recipe"
+              },
+              "ingredients": {
+                "additionalProperties": false,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "string",
+                  "description": "Ingredient description"
+                },
+                "description": "List of ingredients"
+              }
+            },
+            "required": ["recipeName", "ingredients"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    "gemini": {
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "List a few popular cookie recipes, and include the amounts of ingredients."
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "temperature": 0,
+        "topP": 1,
+        "responseMimeType": "application/json",
+        "responseSchema": {
+          "properties": {
+            "recipeName": {
+              "type": "string",
+              "description": "Name of the recipe"
+            },
+            "ingredients": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Ingredient description"
+              },
+              "description": "List of ingredients"
+            }
+          },
+          "required": ["recipeName", "ingredients"],
+          "type": "object"
+        }
+      },
+      "model": "models/gemini-3.1-flash-lite"
+    }
+  },
   "10": {
     "api": {
       "messages": [
@@ -1413,6 +1527,195 @@
             "required": ["strategy", "steps"],
             "additionalProperties": false
           }
+        }
+      }
+    },
+    "openai": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        }
+      ],
+      "model": "gpt-4.1-mini",
+      "top_p": 1,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "answer_plan",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "steps": {
+                "type": "array",
+                "description": "action should be taken to answer the user query",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "description": "name of the action. Eg: 'greet', 'say-thanks'",
+                      "additionalProperties": false
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "additionalProperties": false
+                          },
+                          "value": {
+                            "type": "string",
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["name", "value"],
+                        "additionalProperties": false
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["action", "parameters"],
+                  "additionalProperties": false
+                },
+                "additionalProperties": false
+              },
+              "strategy": {
+                "type": "string",
+                "description": "strategy",
+                "additionalProperties": false
+              }
+            },
+            "required": ["strategy", "steps"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "gemini": {
+      "model": "models/gemini-2.5-flash",
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "Hi"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "generationConfig": {
+        "temperature": 0,
+        "topP": 1,
+        "responseMimeType": "application/json",
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "steps": {
+              "type": "array",
+              "description": "action should be taken to answer the user query",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "name of the action. Eg: 'greet', 'say-thanks'"
+                  },
+                  "parameters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "value"]
+                    }
+                  }
+                },
+                "required": ["action", "parameters"]
+              }
+            },
+            "strategy": {
+              "type": "string",
+              "description": "strategy"
+            }
+          },
+          "required": ["strategy", "steps"]
+        }
+      }
+    }
+  },
+
+  "12a": {
+    "api": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Hi"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "temperature": 0,
+      "top_p": 1,
+      "tools": null,
+      "json_schema": {
+        "name": "answer_plan",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "steps": {
+              "type": "array",
+              "description": "action should be taken to answer the user query",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "name of the action. Eg: 'greet', 'say-thanks'",
+                    "additionalProperties": false
+                  },
+                  "parameters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "additionalProperties": false
+                        },
+                        "value": {
+                          "type": "string",
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["name", "value"],
+                      "additionalProperties": false
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["action", "parameters"],
+                "additionalProperties": false
+              },
+              "additionalProperties": false
+            },
+            "strategy": {
+              "type": "string",
+              "description": "strategy",
+              "additionalProperties": false
+            }
+          },
+          "required": ["strategy", "steps"],
+          "additionalProperties": false
         }
       }
     },

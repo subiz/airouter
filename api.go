@@ -414,6 +414,19 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		}
 	}
 
+	if req.JSONSchema != nil {
+		delete(m, "json_schema")
+		changed = true
+		m["response_format"] = map[string]any{
+			"type": "json_schema",
+			"json_schema": map[string]any{
+				"name":   req.JSONSchema.GetName(),
+				"strict": req.JSONSchema.GetStrict(),
+				"schema": toOpenAISchema(req.JSONSchema.GetSchema()),
+			},
+		}
+	}
+
 	if req.Verbosity != "" {
 		if strings.HasPrefix(model, "gpt-4") || strings.HasPrefix(model, "gpt-3") {
 			delete(m, "verbosity")
@@ -578,6 +591,11 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 	if req.ResponseFormat != nil && req.ResponseFormat.JSONSchema != nil {
 		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
 		geminiReq.GenerationConfig.ResponseSchema = toGeminiSchema(req.ResponseFormat.JSONSchema.Schema)
+	}
+
+	if req.JSONSchema != nil {
+		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
+		geminiReq.GenerationConfig.ResponseSchema = toGeminiSchema(req.JSONSchema.Schema)
 	}
 
 	if req.MaxCompletionTokens > 0 {
