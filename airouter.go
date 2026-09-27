@@ -862,6 +862,7 @@ func toGeminiSchema(schema *header.JSONSchema) *header.JSONSchema {
 		Type:        schema.Type,
 		Description: schema.Description,
 		Required:    schema.Required,
+		Enum:        schema.Enum,
 	}
 	if len(schema.Properties) > 0 {
 		geminiSchema.Properties = make(map[string]*header.JSONSchema)
