@@ -1087,7 +1087,7 @@
         "temperature": 0,
         "topP": 1,
         "responseMimeType": "application/json",
-        "responseSchema": {
+        "responseJsonSchema": {
           "properties": {
             "recipeName": {
               "type": "string",
@@ -1202,7 +1202,7 @@
         "temperature": 0,
         "topP": 1,
         "responseMimeType": "application/json",
-        "responseSchema": {
+        "responseJsonSchema": {
           "properties": {
             "recipeName": {
               "type": "string",
@@ -1627,7 +1627,7 @@
         "temperature": 0,
         "topP": 1,
         "responseMimeType": "application/json",
-        "responseSchema": {
+        "responseJsonSchema": {
           "type": "object",
           "properties": {
             "steps": {
@@ -1817,7 +1817,7 @@
         "temperature": 0,
         "topP": 1,
         "responseMimeType": "application/json",
-        "responseSchema": {
+        "responseJsonSchema": {
           "type": "object",
           "properties": {
             "steps": {

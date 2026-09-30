@@ -88,13 +88,13 @@ type GeminiThinkingConfig struct {
 type GeminiGenerationConfig struct {
 	StopSequences []string `json:"stopSequences,omitempty"`
 	// CandidateCount   int                   `json:"candidateCount,omitempty"`
-	MaxOutputTokens  int                   `json:"maxOutputTokens,omitempty"`
-	Temperature      float32               `json:"temperature,omitempty"`
-	TopP             float32               `json:"topP,omitempty"`
-	Seed             int                   `json:"seed,omitempty"`
-	ResponseMIMEType string                `json:"responseMimeType,omitempty"`
-	ResponseSchema   *header.JSONSchema    `json:"responseSchema,omitempty"`
-	ThinkingConfig   *GeminiThinkingConfig `json:"thinkingConfig,omitempty"`
+	MaxOutputTokens    int                   `json:"maxOutputTokens,omitempty"`
+	Temperature        float32               `json:"temperature,omitempty"`
+	TopP               float32               `json:"topP,omitempty"`
+	Seed               int                   `json:"seed,omitempty"`
+	ResponseMIMEType   string                `json:"responseMimeType,omitempty"`
+	ResponseJSONSchema *header.JSONSchema    `json:"responseJsonSchema,omitempty"`
+	ThinkingConfig     *GeminiThinkingConfig `json:"thinkingConfig,omitempty"`
 }
 
 // GeminiTool is a local struct to avoid genai dependency.
@@ -591,12 +591,13 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 
 	if req.ResponseFormat != nil && req.ResponseFormat.JSONSchema != nil {
 		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
-		geminiReq.GenerationConfig.ResponseSchema = toGeminiSchema(req.ResponseFormat.JSONSchema.Schema)
+		// The JSON Schema path preserves empty enum values, which responseSchema rejects.
+		geminiReq.GenerationConfig.ResponseJSONSchema = toGeminiSchema(req.ResponseFormat.JSONSchema.Schema)
 	}
 
 	if req.JSONSchema != nil {
 		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
-		geminiReq.GenerationConfig.ResponseSchema = toGeminiSchema(req.JSONSchema.Schema)
+		geminiReq.GenerationConfig.ResponseJSONSchema = toGeminiSchema(req.JSONSchema.Schema)
 	}
 
 	if req.MaxCompletionTokens > 0 {
