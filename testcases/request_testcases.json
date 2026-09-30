@@ -7,6 +7,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -42,6 +43,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator" },
         { "role": "user", "content": "What is 1+1" }
@@ -86,6 +88,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -124,6 +127,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator" },
         { "role": "user", "content": "1+1" }
@@ -220,6 +224,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
@@ -393,6 +398,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "user",
@@ -524,6 +530,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "system",
@@ -676,6 +683,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "content": "You are Thaco Bot, a sale of Thaco Auto. Thaco Auto THACO AUTO (thuộc Tập đoàn THACO) là doanh nghiệp sản xuất, lắp ráp và phân phối ô tô hàng đầu Việt Nam.",
@@ -840,6 +848,7 @@
       "top_p": 0
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "system",
@@ -909,6 +918,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "user", "content": "My favorite color is blue." },
         { "role": "assistant", "content": "That's a great color!" },
@@ -959,6 +969,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [{ "role": "system", "content": "This is a system prompt." }],
       "model": "gpt-4o-mini",
       "top_p": 1
@@ -1022,6 +1033,7 @@
       }
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
@@ -1136,6 +1148,7 @@
       }
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "content": "List a few popular cookie recipes, and include the amounts of ingredients.",
@@ -1237,6 +1250,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "system",
@@ -1350,6 +1364,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "system",
@@ -1531,6 +1546,7 @@
       }
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "system",
@@ -1720,6 +1736,7 @@
       }
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "system",
@@ -1853,6 +1870,7 @@
       "reasoning_effort": "medium"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -1897,6 +1915,7 @@
       "reasoning_effort": "high"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "seed": 90,
       "messages": [
         {
@@ -1947,6 +1966,7 @@
       "model": "gemini-2.5-flash-lite"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "model": "gpt-5-nano",
       "messages": [
         {
@@ -1992,6 +2012,7 @@
       "model": "gpt-4o-mini"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" },
         { "role": "user", "content": "ok1" },
@@ -2038,6 +2059,7 @@
       "model": "gpt-4.1-mini"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "user",
@@ -2088,6 +2110,7 @@
       "max_completion_tokens": 100
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "user",
@@ -2123,6 +2146,7 @@
       "verbosity": "low"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "user",
@@ -2155,6 +2179,7 @@
       "verbosity": "low"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         {
           "role": "user",
@@ -2185,6 +2210,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -2223,6 +2249,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -2291,6 +2318,7 @@
       "reasoning_effort": "high"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "seed": 90,
       "messages": [
         {
@@ -2384,6 +2412,7 @@
       "top_p": 1
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -2418,6 +2447,7 @@
       "service_tier": "flex"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -2447,6 +2477,7 @@
       "service_tier": "flex"
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "messages": [
         { "role": "system", "content": "You are a calculator. What is 1+1" }
       ],
@@ -2522,6 +2553,7 @@
       ]
     },
     "openai": {
+      "prompt_cache_retention": "24h",
       "model": "gpt-4.1-mini",
       "messages": [
         {

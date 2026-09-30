@@ -340,6 +340,7 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reached","type": "timeout"}}`)
 
 func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
+	req.PromptCacheRetention = "24h"
 	b, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
