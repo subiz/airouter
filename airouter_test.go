@@ -482,6 +482,24 @@ func TestCost(t *testing.T) {
 			t.Errorf("Flex cost should be half of regular cost, got regular %d, flex %d", costRegular, costFlex)
 		}
 	})
+
+	t.Run("long_context", func(t *testing.T) {
+		// <= 272K: $0.10 input, $0.01 cached, $0.50 output per 1M tokens
+		short := &Usage{PromptTokens: 272_000, CompletionTokens: 1000, PromptTokensDetails: &PromptTokensDetails{CachedTokens: 72_000}}
+		if cost := CalculateCost("gpt-6-luna", short, ""); cost != 20_000_000+720_000+500_000 {
+			t.Errorf("short context cost, got %d", cost)
+		}
+
+		// > 272K: $0.20 input, $0.02 cached, $0.75 output per 1M tokens
+		long := &Usage{PromptTokens: 300_000, CompletionTokens: 1000, PromptTokensDetails: &PromptTokensDetails{CachedTokens: 100_000}}
+		if cost := CalculateCost("gpt-6-luna", long, ""); cost != 40_000_000+2_000_000+750_000 {
+			t.Errorf("long context cost, got %d", cost)
+		}
+
+		if cost := CalculateCost("gpt-6-luna", long, "flex"); cost != (40_000_000+2_000_000+750_000)/2 {
+			t.Errorf("long context flex cost, got %d", cost)
+		}
+	})
 }
 
 // ResponseTestCase is a struct for a single test case from the JSON file.

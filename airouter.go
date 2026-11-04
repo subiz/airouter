@@ -36,6 +36,7 @@ const Gpt_4_1_nano = "gpt-4.1-nano"
 const Gpt_4_1 = "gpt-4.1"
 const Gpt_5_4_nano = "gpt-5.4-nano"
 const Gpt_5_4_mini = "gpt-5.4-mini"
+const Gpt_6_luna = "gpt-6-luna"
 const O3 = "o3"
 const O4_mini = "o4-mini"
 
@@ -98,6 +99,10 @@ func ToModel(model string) string {
 
 	if model == "gpt-5.4-mini" || strings.HasPrefix(model, "gpt-5.4-mini-2") {
 		return Gpt_5_4_mini
+	}
+
+	if model == "gpt-6-luna" || strings.HasPrefix(model, "gpt-6-luna-2") {
+		return Gpt_6_luna
 	}
 
 	if model == O3 || strings.HasPrefix(model, "o3-2") {
@@ -232,6 +237,24 @@ func GetFallbackChatModel(model string) string {
 	return Gemini_3_1_flash_lite
 }
 
+// long context pricing, applied to the whole request when prompt tokens exceed llmlongcontextthreshold
+const llmlongcontextthreshold = 272_000
+
+// per 1M tokens
+var llmmodellonginputprice = map[string]float64{
+	"gpt-6-luna": 0.2,
+}
+
+// per 1M tokens
+var llmmodellongoutputprice = map[string]float64{
+	"gpt-6-luna": 0.75,
+}
+
+// per 1M tokens
+var llmmodellongcachedprice = map[string]float64{
+	"gpt-6-luna": 0.02,
+}
+
 // per 1M tokens
 var llmmodelinputprice = map[string]float64{
 	"gpt-4.1":      2,
@@ -242,6 +265,7 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-5":        1.25,
 	"gpt-5-mini":   0.25,
 	"gpt-5-nano":   0.05,
+	"gpt-6-luna":   0.1,
 	"gpt-5.4-nano": 0.2,
 	"gpt-5.4-mini": 0.75,
 
@@ -267,6 +291,7 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-5-nano":   0.4,
 	"gpt-5.4-nano": 1.25,
 	"gpt-5.4-mini": 4.5,
+	"gpt-6-luna":   0.5,
 
 	"gemini-2.5-flash-lite": 0.4,
 	"gemini-3.1-flash-lite": 1.5,
@@ -289,6 +314,7 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-5-nano":   0.005,
 	"gpt-5.4-nano": 0.02,
 	"gpt-5.4-mini": 0.075,
+	"gpt-6-luna":   0.01,
 
 	"gemini-2.5-flash":      0.03,
 	"gemini-2.5-flash-lite": 0.01,
@@ -444,9 +470,18 @@ func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 		cachedtoken = usage.PromptTokensDetails.CachedTokens
 	}
 	outputtoken := usage.CompletionTokens
-	cost := 1000 * (float64(inputtoken)*llmmodelinputprice[ToModel(model)] +
-		float64(cachedtoken)*llmmodelcachedprice[ToModel(model)] +
-		float64(outputtoken)*llmmodeloutputprice[ToModel(model)])
+	stdmodel := ToModel(model)
+	inputprice := llmmodelinputprice[stdmodel]
+	cachedprice := llmmodelcachedprice[stdmodel]
+	outputprice := llmmodeloutputprice[stdmodel]
+	if _, has := llmmodellonginputprice[stdmodel]; has && usage.PromptTokens > llmlongcontextthreshold {
+		inputprice = llmmodellonginputprice[stdmodel]
+		cachedprice = llmmodellongcachedprice[stdmodel]
+		outputprice = llmmodellongoutputprice[stdmodel]
+	}
+	cost := 1000 * (float64(inputtoken)*inputprice +
+		float64(cachedtoken)*cachedprice +
+		float64(outputtoken)*outputprice)
 	if service_tier == "flex" {
 		cost = cost / 2
 	}

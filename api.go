@@ -513,6 +513,14 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 				changed = true
 			}
 		}
+
+		if model == "gpt-6-luna" {
+			// Chat Completions supports function calling only with reasoning_effort set to none.
+			if len(req.Tools) > 0 {
+				m["reasoning_effort"] = "none"
+				changed = true
+			}
+		}
 	}
 
 	if len(req.Stop) > 4 {
