@@ -344,7 +344,7 @@ type OpenAIChatMessage struct {
 	ToolCallId string                 `json:"tool_call_id,omitempty"`
 	Refusal    string                 `json:"refusal,omitempty"`
 
-	ReasoningItems []json.RawMessage `json:"reasoning_items,omitempty"` // our field, not openai. Responses API reasoning items
+	OutputItems []json.RawMessage `json:"response_output_items,omitempty"` // our field, not openai. Responses API output items, only set when there is reasoning
 }
 
 type OpenAIMessageContentImageUrl struct {
@@ -480,11 +480,13 @@ func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 	if details := usage.PromptTokensDetails; details != nil {
 		cachedtoken = details.CachedTokens
 		// writes without a breakdown use the default 30m lifetime (the only one chat completion supports)
-		if details.CacheWriteTokensDetails != nil {
-			cachewrite12htoken = details.CacheWriteTokensDetails.Ttl12hTokens
+		cachewritetoken := details.CacheWriteTokens
+		if wd := details.CacheWriteTokensDetails; wd != nil {
+			cachewrite12htoken = wd.Ttl12hTokens
+			cachewritetoken = max(cachewritetoken, wd.Ttl30mTokens+wd.Ttl12hTokens)
 		}
-		cachewrite30mtoken = details.CacheWriteTokens - cachewrite12htoken
-		inputtoken -= cachedtoken + details.CacheWriteTokens
+		cachewrite30mtoken = cachewritetoken - cachewrite12htoken
+		inputtoken -= cachedtoken + cachewritetoken
 	}
 	outputtoken := usage.CompletionTokens
 	stdmodel := ToModel(model)
@@ -692,15 +694,16 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		c0 := completion.Choices[0].Message
 		assistantmsg := &header.LLMChatHistoryEntry{
 			Role:       c0.Role,
+			Content:    c0.GetContent(),
 			Name:       c0.Name,
 			ToolCallId: c0.ToolCallId,
 			Refusal:    c0.Refusal,
 			ToolCalls:  toOurToolCalls(c0.ToolCalls),
 		}
-		if len(c0.ReasoningItems) > 0 {
+		if len(c0.OutputItems) > 0 {
 			// keep the reasoning so the model can continue it after the tool calls
-			itemsb, _ := json.Marshal(c0.ReasoningItems)
-			assistantmsg.Fields = map[string]string{reasoningItemsField: string(itemsb)}
+			itemsb, _ := json.Marshal(c0.OutputItems)
+			assistantmsg.Fields = map[string]string{outputItemsField: string(itemsb)}
 		}
 		input.Messages = append(input.Messages, assistantmsg)
 

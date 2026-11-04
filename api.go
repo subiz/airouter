@@ -339,6 +339,86 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 
 var chatgpttimeouterr = []byte(`{"error": {"message": "Error: Timeout was reached","type": "timeout"}}`)
 
+// resolveEffort returns the reasoning effort of the request, reasoning.effort takes precedence over reasoning_effort
+func resolveEffort(req CompletionInput) string {
+	if req.Reasoning != nil {
+		return req.Reasoning.Effort
+	}
+	return req.ReasoningEffort
+}
+
+// normalizeOpenAIRole converts our roles (agent, bot) to OpenAI roles
+func normalizeOpenAIRole(role string) string {
+	role = strings.TrimSpace(strings.ToLower(role))
+	if role == "agent" || role == "bot" {
+		return "assistant"
+	}
+	return role
+}
+
+// toOpenAIToolParameters converts a function tool parameters schema to the OpenAI format
+func toOpenAIToolParameters(schema *header.JSONSchema) map[string]any {
+	paramb, _ := json.Marshal(schema)
+	params := map[string]any{}
+	json.Unmarshal(paramb, &params)
+	params["additionalProperties"] = schema.AdditionalProperties
+	props := map[string]any{}
+	for k, v := range schema.Properties {
+		props[k] = toOpenAISchema(v)
+	}
+	if len(props) > 0 {
+		params["properties"] = props
+	}
+	return params
+}
+
+// toOpenAIJSONSchemaFormat returns the name, strict and schema of the requested JSON schema output, json_schema
+// takes precedence over the deprecated response_format. Returns nil if there is none
+func toOpenAIJSONSchemaFormat(req CompletionInput) map[string]any {
+	js := req.JSONSchema
+	if js == nil && req.ResponseFormat != nil {
+		js = req.ResponseFormat.JSONSchema
+	}
+	if js == nil {
+		return nil
+	}
+	return map[string]any{
+		"name":   js.GetName(),
+		"strict": js.GetStrict(),
+		"schema": toOpenAISchema(js.GetSchema()),
+	}
+}
+
+// postOpenAI sends a request to an OpenAI endpoint, api is the endpoint name used in errors (completion, responses)
+func postOpenAI(ctx context.Context, url, apikey string, payload []byte, api string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, log.EServer(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apikey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	output := buf.Bytes()
+
+	if resp.StatusCode != 200 {
+		if strings.EqualFold(string(output), "Error: Timeout was reached") {
+			return chatgpttimeouterr, log.EProvider(nil, "openai", api, log.M{"status": resp.StatusCode, "_payload": output})
+		}
+
+		// error body is {"error": {...}} for both chat completion and responses
+		return output, log.EProvider(nil, "openai", api, log.M{"status": resp.StatusCode, "_payload": output})
+	}
+
+	return output, nil
+}
+
 func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	req.PromptCacheRetention = "24h"
 	b, err := json.Marshal(req)
@@ -372,22 +452,8 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 				"type":     "function",
 				"function": newfn,
 			}
-			var params map[string]any
 			if tool.Function.Parameters != nil {
-				paramb, _ := json.Marshal(tool.Function.Parameters)
-
-				params = map[string]any{}
-
-				json.Unmarshal(paramb, &params)
-				params["additionalProperties"] = tool.Function.Parameters.AdditionalProperties
-				props := map[string]any{}
-				for k, v := range tool.Function.Parameters.Properties {
-					props[k] = toOpenAISchema(v)
-				}
-				if len(props) > 0 {
-					params["properties"] = props
-				}
-				newfn["parameters"] = params
+				newfn["parameters"] = toOpenAIToolParameters(tool.Function.Parameters)
 			}
 			tools = append(tools, newtool)
 			continue
@@ -402,30 +468,11 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		m["tools"] = tools
 	}
 
-	if req.ResponseFormat != nil && req.ResponseFormat.JSONSchema != nil {
+	if format := toOpenAIJSONSchemaFormat(req); format != nil {
 		delete(m, "response_format")
-		changed = true
-		m["response_format"] = map[string]any{
-			"type": "json_schema",
-			"json_schema": map[string]any{
-				"name":   req.ResponseFormat.JSONSchema.GetName(),
-				"strict": req.ResponseFormat.JSONSchema.GetStrict(),
-				"schema": toOpenAISchema(req.ResponseFormat.JSONSchema.GetSchema()),
-			},
-		}
-	}
-
-	if req.JSONSchema != nil {
 		delete(m, "json_schema")
 		changed = true
-		m["response_format"] = map[string]any{
-			"type": "json_schema",
-			"json_schema": map[string]any{
-				"name":   req.JSONSchema.GetName(),
-				"strict": req.JSONSchema.GetStrict(),
-				"schema": toOpenAISchema(req.JSONSchema.GetSchema()),
-			},
-		}
+		m["response_format"] = map[string]any{"type": "json_schema", "json_schema": format}
 	}
 
 	if req.Verbosity != "" {
@@ -453,11 +500,7 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 
 		if rolei := msg["role"]; rolei != nil {
 			role, _ := rolei.(string)
-			newrole := role
-			newrole = strings.TrimSpace(strings.ToLower(role))
-			if newrole == "agent" || newrole == "bot" {
-				newrole = "assistant"
-			}
+			newrole := normalizeOpenAIRole(role)
 			msg["role"] = newrole
 			if newrole != role {
 				changed = true
@@ -465,9 +508,9 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 		}
 
 		if fields, ok := msg["fields"].(map[string]any); ok {
-			if _, has := fields[reasoningItemsField]; has {
+			if _, has := fields[outputItemsField]; has {
 				// only used by the Responses API
-				delete(fields, reasoningItemsField)
+				delete(fields, outputItemsField)
 				if len(fields) == 0 {
 					delete(msg, "fields")
 				}
@@ -508,7 +551,7 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	if req.Reasoning != nil {
 		delete(m, "reasoning")
 		changed = true
-		m["reasoning_effort"] = req.Reasoning.Effort
+		m["reasoning_effort"] = resolveEffort(req)
 	}
 
 	if m["reasoning_effort"] != "" {
@@ -519,6 +562,7 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 
 		if model == "gpt-5.4-mini" || model == "gpt-5.4-nano" {
 			// Function tools with reasoning_effort are not supported for gpt-5.4-nano in /v1/chat/completions. Please use /v1/responses instead.
+			// chatCompleteChatGPT sends those requests to /v1/responses, this keeps direct callers working
 			if len(req.Tools) > 0 {
 				delete(m, "reasoning_effort")
 				changed = true
@@ -542,8 +586,8 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	}
 
 	if _, has := m["service_tier"]; has {
-		// service_tier parameter, this only applied to model gpt-5* or o3 or o4 mini, unsupported: the rest (gpt-4.1-mini)
-		if !(strings.HasPrefix(model, "gpt-5") || model == "o3" || model == "o4-mini") {
+		// service_tier parameter, this only applied to model gpt-5*, gpt-6* or o3 or o4 mini, unsupported: the rest (gpt-4.1-mini)
+		if !(strings.HasPrefix(model, "gpt-5") || strings.HasPrefix(model, "gpt-6") || model == "o3" || model == "o4-mini") {
 			delete(m, "service_tier")
 			changed = true
 		}
@@ -886,32 +930,7 @@ func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionI
 	if err != nil {
 		return nil, err
 	}
-	url := "https://api.openai.com/v1/chat/completions"
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(requestb))
-	if err != nil {
-		return nil, log.EServer(err)
-	}
-	req.Header.Set("Authorization", "Bearer "+apikey)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	output := buf.Bytes()
-
-	if resp.StatusCode != 200 {
-		if strings.EqualFold(string(output), "Error: Timeout was reached") {
-			return chatgpttimeouterr, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
-		}
-
-		return output, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
-	}
-
-	return output, nil
+	return postOpenAI(ctx, "https://api.openai.com/v1/chat/completions", apikey, requestb, "completion")
 }
 
 func GetEmbeddingAPI(ctx context.Context, model, text string) (OpenAIEmbeddingResponse, error) {

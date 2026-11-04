@@ -37,7 +37,10 @@ func TestUseOpenAIResponsesAPI(t *testing.T) {
 }
 
 func TestToOpenAIResponsesJSON(t *testing.T) {
-	reasoning := `[{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc"}]`
+	output := `[{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc1"},` +
+		`{"type":"message","role":"assistant","content":[{"type":"output_text","text":"let me check"}]},` +
+		`{"type":"reasoning","id":"rs_2","summary":[],"encrypted_content":"enc2"},` +
+		`{"type":"function_call","call_id":"call_1","name":"get_weather","arguments":"{\"city\":\"hanoi\"}"}]`
 	input := CompletionInput{
 		Model:               "gpt-6-luna",
 		Instruct:            "be nice",
@@ -45,19 +48,31 @@ func TestToOpenAIResponsesJSON(t *testing.T) {
 		MaxCompletionTokens: 100,
 		Temperature:         0.5,
 		Stop:                []string{"x"},
+		ServiceTier:         "flex",
 		Tools: []OpenAITool{{Type: "function", Function: &Function{
 			Name:        "get_weather",
 			Description: "get weather",
 			Parameters:  &header.JSONSchema{Type: "object"},
 		}}},
 		Messages: []*header.LLMChatHistoryEntry{
-			{Role: "user", Content: "weather in hanoi?"},
+			{Role: "user", Contents: []*header.OpenAIMessageContent{
+				{Type: "text", Text: "weather in this city?"},
+				{Type: "image_url", ImageUrl: &header.OpenAIMessageContentImageUrl{Url: "https://img/hanoi.png", Detail: "low"}},
+			}},
 			{
 				Role:      "assistant",
+				Content:   "let me check",
 				ToolCalls: []*header.LLMToolCall{{Id: "call_1", Type: "function", Function: &header.LLMToolFunction{Name: "get_weather", Arguments: `{"city":"hanoi"}`}}},
-				Fields:    map[string]string{reasoningItemsField: reasoning},
+				Fields:    map[string]string{outputItemsField: output},
 			},
 			{Role: "tool", ToolCallId: "call_1", Content: "30C"},
+			// without output items (e.g. no reasoning), the message is rebuilt
+			{
+				Role:      "assistant",
+				Content:   "and saigon",
+				ToolCalls: []*header.LLMToolCall{{Id: "call_2", Type: "function", Function: &header.LLMToolFunction{Name: "get_weather", Arguments: `{"city":"saigon"}`}}},
+			},
+			{Role: "tool", ToolCallId: "call_2", Content: "34C"},
 		},
 	}
 
@@ -74,15 +89,24 @@ func TestToOpenAIResponsesJSON(t *testing.T) {
 		"store": false,
 		"include": ["reasoning.encrypted_content"],
 		"prompt_cache_options": {"ttl": "12h"},
+		"service_tier": "flex",
 		"max_output_tokens": 100,
 		"reasoning": {"effort": "low"},
 		"tools": [{"type": "function", "strict": false, "name": "get_weather", "description": "get weather", "parameters": {"type": "object", "additionalProperties": false}}],
 		"input": [
 			{"role": "system", "content": "be nice"},
-			{"role": "user", "content": "weather in hanoi?"},
-			{"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "enc"},
+			{"role": "user", "content": [
+				{"type": "input_text", "text": "weather in this city?"},
+				{"type": "input_image", "image_url": "https://img/hanoi.png", "detail": "low"}
+			]},
+			{"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "enc1"},
+			{"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "let me check"}]},
+			{"type": "reasoning", "id": "rs_2", "summary": [], "encrypted_content": "enc2"},
 			{"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{\"city\":\"hanoi\"}"},
-			{"type": "function_call_output", "call_id": "call_1", "output": "30C"}
+			{"type": "function_call_output", "call_id": "call_1", "output": "30C"},
+			{"role": "assistant", "content": "and saigon"},
+			{"type": "function_call", "call_id": "call_2", "name": "get_weather", "arguments": "{\"city\":\"saigon\"}"},
+			{"type": "function_call_output", "call_id": "call_2", "output": "34C"}
 		]
 	}`), &expected)
 
@@ -90,10 +114,10 @@ func TestToOpenAIResponsesJSON(t *testing.T) {
 		t.Errorf("Responses request mismatch (-want +got):\n%s", cmp.Diff(expected, actual))
 	}
 
-	// chat completions must not receive our reasoning field
+	// chat completions must not receive our output items field
 	chatb, _ := ToOpenAICompletionJSON(input)
-	if strings.Contains(string(chatb), reasoningItemsField) {
-		t.Errorf("chat completion request should not contain %s: %s", reasoningItemsField, chatb)
+	if strings.Contains(string(chatb), outputItemsField) {
+		t.Errorf("chat completion request should not contain %s: %s", outputItemsField, chatb)
 	}
 }
 
@@ -119,8 +143,8 @@ func TestToOpenAIChatResponseFromResponses(t *testing.T) {
 	if msg.Content != nil || len(msg.ToolCalls) != 1 || msg.ToolCalls[0].ID != "call_1" || msg.ToolCalls[0].Function.Name != "get_weather" {
 		t.Errorf("unexpected message %+v", msg)
 	}
-	if len(msg.ReasoningItems) != 1 || !strings.Contains(string(msg.ReasoningItems[0]), `"enc"`) {
-		t.Errorf("unexpected reasoning items %s", msg.ReasoningItems)
+	if len(msg.OutputItems) != 2 || !strings.Contains(string(msg.OutputItems[0]), `"enc"`) || !strings.Contains(string(msg.OutputItems[1]), `"fc_1"`) {
+		t.Errorf("unexpected output items %s", msg.OutputItems)
 	}
 	if cost := CalculateCost(res.Model, chat.Usage, chat.ServiceTier); cost != 40_000_000+2_000_000+750_000 {
 		t.Errorf("unexpected cost %d", cost)
@@ -178,7 +202,7 @@ func TestCompleteToolsWithReasoning(t *testing.T) {
 				t.Errorf("unexpected content %q", content)
 			}
 			// the model may skip reasoning on easy prompts, so only log whether it was carried over
-			hasreasoning := strings.Contains(string(output.Request), reasoningItemsField)
+			hasreasoning := strings.Contains(string(output.Request), outputItemsField)
 
 			// cost reported by the (fake) server must match the token usage
 			expected := CalculateCost(model, &Usage{PromptTokens: output.InputTokens, CompletionTokens: output.OutputTokens}, "")
@@ -249,5 +273,28 @@ func TestLunaPromptCache12h(t *testing.T) {
 		}
 		t.Logf("call %d: prompt %d, cached %d, write %d, output %d, cost %d kfpvusd", i, usage.PromptTokens, details.CachedTokens, details.CacheWriteTokens, usage.CompletionTokens, usage.KFpvCostUSD)
 		time.Sleep(2 * time.Second)
+	}
+}
+
+func TestToOpenAIChatResponseFromResponsesFailed(t *testing.T) {
+	res := &OpenAIResponsesResponse{}
+	json.Unmarshal([]byte(`{"status": "failed", "error": {"code": "server_error", "message": "boom"}}`), res)
+	chat := toOpenAIChatResponseFromResponses(res)
+	if chat.Error == nil || chat.Error.Message != "boom" || len(chat.Choices) != 0 {
+		t.Errorf("unexpected response %+v", chat)
+	}
+
+	// failed without error details still reports an error
+	res = &OpenAIResponsesResponse{}
+	json.Unmarshal([]byte(`{"status": "failed"}`), res)
+	if chat := toOpenAIChatResponseFromResponses(res); chat.Error == nil {
+		t.Errorf("expect an error, got %+v", chat)
+	}
+
+	// no reasoning, no output items to replay
+	res = &OpenAIResponsesResponse{}
+	json.Unmarshal([]byte(`{"status": "completed", "output": [{"type": "function_call", "call_id": "call_1", "name": "f", "arguments": "{}"}]}`), res)
+	if chat := toOpenAIChatResponseFromResponses(res); len(chat.Choices[0].Message.OutputItems) != 0 {
+		t.Errorf("expect no output items, got %s", chat.Choices[0].Message.OutputItems)
 	}
 }

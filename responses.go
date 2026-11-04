@@ -1,17 +1,17 @@
 package airouter
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"net/http"
 
+	"github.com/subiz/header"
 	"github.com/subiz/log"
 )
 
-// reasoningItemsField is the LLMChatHistoryEntry.Fields key holding the (encrypted) reasoning items
-// of an assistant message, so they can be sent back to the Responses API in the next tool turn
-const reasoningItemsField = "openai_reasoning_items"
+// outputItemsField is the LLMChatHistoryEntry.Fields key holding the Responses API output items
+// (encrypted reasoning, message, function calls, in order) of an assistant message, so they can be
+// sent back as is in the next tool turn
+const outputItemsField = "openai_response_output_items"
 
 // useOpenAIResponsesAPI reports whether the request must be sent to /v1/responses instead of
 // /v1/chat/completions. gpt-6-luna always uses the Responses API (12h prompt cache), gpt-5.4 models
@@ -26,11 +26,7 @@ func useOpenAIResponsesAPI(req CompletionInput) bool {
 		return false
 	}
 
-	effort := req.ReasoningEffort
-	if req.Reasoning != nil {
-		effort = req.Reasoning.Effort
-	}
-	if effort == "" || effort == "none" {
+	if effort := resolveEffort(req); effort == "" || effort == "none" {
 		return false
 	}
 
@@ -39,102 +35,76 @@ func useOpenAIResponsesAPI(req CompletionInput) bool {
 
 // ToOpenAIResponsesJSON converts a CompletionInput to an OpenAI /v1/responses request
 func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
-	// reasoning items of assistant messages, keyed by their first tool call id
-	reasoningM := map[string][]json.RawMessage{}
-	for _, msg := range req.Messages {
-		itemsstr := msg.GetFields()[reasoningItemsField]
-		if itemsstr == "" || len(msg.GetToolCalls()) == 0 {
-			continue
-		}
-		items := []json.RawMessage{}
-		if err := json.Unmarshal([]byte(itemsstr), &items); err == nil {
-			reasoningM[msg.GetToolCalls()[0].GetId()] = items
-		}
-	}
-
-	// reuse the chat completion conversion, then reshape it
-	chatb, err := ToOpenAICompletionJSON(req)
-	if err != nil {
-		return nil, err
-	}
-	m := map[string]any{}
-	if err := json.Unmarshal(chatb, &m); err != nil {
-		return nil, err
-	}
-
+	model := ToOpenAIModel(req.Model)
 	out := map[string]any{
-		"model":   m["model"],
+		"model":   model,
 		"store":   false,
 		"include": []string{"reasoning.encrypted_content"},
 	}
 
-	// stop and seed are not supported by the Responses API
-	for _, key := range []string{"tool_choice", "service_tier", "prompt_cache_key", "prompt_cache_retention"} {
-		if v, has := m[key]; has {
-			out[key] = v
-		}
-	}
-
-	if out["model"] == Gpt_6_luna {
+	if model == Gpt_6_luna {
 		// gpt-5.6+ models replace prompt_cache_retention with prompt_cache_options
-		delete(out, "prompt_cache_retention")
 		out["prompt_cache_options"] = map[string]any{"ttl": "12h"}
+	} else {
+		out["prompt_cache_retention"] = "24h"
+	}
+	if req.PromptCacheKey != "" {
+		out["prompt_cache_key"] = req.PromptCacheKey
+	}
+	if req.ServiceTier != "" {
+		out["service_tier"] = req.ServiceTier
+	}
+	if req.ToolChoice != "" {
+		out["tool_choice"] = req.ToolChoice
+	}
+	if req.MaxCompletionTokens > 0 {
+		out["max_output_tokens"] = req.MaxCompletionTokens
 	}
 
-	if v, has := m["max_completion_tokens"]; has {
-		out["max_output_tokens"] = v
-	}
-
-	// read from req, the chat completion conversion may drop reasoning_effort
-	effort := req.ReasoningEffort
-	if req.Reasoning != nil {
-		effort = req.Reasoning.Effort
-	}
+	// stop and seed are not supported by the Responses API
+	effort := resolveEffort(req)
 	if effort != "" {
 		out["reasoning"] = map[string]any{"effort": effort}
 	}
 
 	// sampling params are only supported without reasoning
 	if effort == "none" {
-		for _, key := range []string{"temperature", "top_p"} {
-			if v, has := m[key]; has {
-				out[key] = v
-			}
+		if req.Temperature != 0 {
+			out["temperature"] = req.Temperature
+		}
+		if req.TopP != 0 {
+			out["top_p"] = req.TopP
 		}
 	}
 
 	text := map[string]any{}
-	if v, has := m["verbosity"]; has {
-		text["verbosity"] = v
+	if req.Verbosity != "" {
+		text["verbosity"] = req.Verbosity
 	}
-	if rf, ok := m["response_format"].(map[string]any); ok {
-		format := map[string]any{"type": rf["type"]}
-		if js, ok := rf["json_schema"].(map[string]any); ok {
-			for k, v := range js {
-				format[k] = v
-			}
-		}
+	if format := toOpenAIJSONSchemaFormat(req); format != nil {
+		format["type"] = "json_schema"
 		text["format"] = format
+	} else if req.ResponseFormat != nil && req.ResponseFormat.Type != "" {
+		text["format"] = map[string]any{"type": req.ResponseFormat.Type} // json_object, text
 	}
 	if len(text) > 0 {
 		out["text"] = text
 	}
 
 	tools := []any{}
-	toolsi, _ := m["tools"].([]any)
-	for _, tooli := range toolsi {
-		tool, ok := tooli.(map[string]any)
-		if !ok {
+	for _, tool := range req.Tools {
+		if tool.Type != "function" || tool.Function == nil {
+			tools = append(tools, map[string]any{"type": tool.Type})
 			continue
 		}
-		fn, ok := tool["function"].(map[string]any)
-		if tool["type"] != "function" || !ok {
-			tools = append(tools, tool)
-			continue
+		newtool := map[string]any{
+			"type":        "function",
+			"name":        tool.Function.Name,
+			"description": tool.Function.Description,
+			"strict":      false,
 		}
-		newtool := map[string]any{"type": "function", "strict": false}
-		for k, v := range fn {
-			newtool[k] = v
+		if tool.Function.Parameters != nil {
+			newtool["parameters"] = toOpenAIToolParameters(tool.Function.Parameters)
 		}
 		tools = append(tools, newtool)
 	}
@@ -143,44 +113,41 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 	}
 
 	input := []any{}
-	messagesi, _ := m["messages"].([]any)
-	for _, msgi := range messagesi {
-		msg, ok := msgi.(map[string]any)
-		if !ok {
-			continue
-		}
-		role, _ := msg["role"].(string)
-
+	if req.Instruct != "" {
+		input = append(input, map[string]any{"role": "system", "content": req.Instruct})
+	}
+	for _, msg := range req.Messages {
+		role := normalizeOpenAIRole(msg.GetRole())
 		if role == "tool" {
 			input = append(input, map[string]any{
 				"type":    "function_call_output",
-				"call_id": msg["tool_call_id"],
-				"output":  toResponsesText(msg["content"]),
+				"call_id": msg.GetToolCallId(),
+				"output":  toResponsesText(msg),
 			})
 			continue
 		}
 
-		toolcalls, _ := msg["tool_calls"].([]any)
-		if len(toolcalls) > 0 {
-			firstcall, _ := toolcalls[0].(map[string]any)
-			firstid, _ := firstcall["id"].(string)
-			for _, item := range reasoningM[firstid] {
-				input = append(input, item)
+		if itemsstr := msg.GetFields()[outputItemsField]; itemsstr != "" && len(msg.GetToolCalls()) > 0 {
+			items := []json.RawMessage{}
+			if err := json.Unmarshal([]byte(itemsstr), &items); err == nil && len(items) > 0 {
+				// replay the original output, reasoning items must stay right before their following item
+				for _, item := range items {
+					input = append(input, item)
+				}
+				continue
 			}
 		}
 
-		if content := toResponsesContent(role, msg["content"]); content != nil {
+		if content := toResponsesContent(role, msg); content != nil {
 			input = append(input, map[string]any{"role": role, "content": content})
 		}
 
-		for _, calli := range toolcalls {
-			call, _ := calli.(map[string]any)
-			fn, _ := call["function"].(map[string]any)
+		for _, call := range msg.GetToolCalls() {
 			input = append(input, map[string]any{
 				"type":      "function_call",
-				"call_id":   call["id"],
-				"name":      fn["name"],
-				"arguments": fn["arguments"],
+				"call_id":   call.GetId(),
+				"name":      call.GetFunction().GetName(),
+				"arguments": call.GetFunction().GetArguments(),
 			})
 		}
 	}
@@ -188,54 +155,49 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 	return json.Marshal(out)
 }
 
-// toResponsesContent converts a chat completion message content to a Responses API message content,
+// toResponsesContent converts a message content to a Responses API message content,
 // returns nil if the message has no content
-func toResponsesContent(role string, contenti any) any {
-	switch content := contenti.(type) {
-	case string:
-		if content == "" {
+func toResponsesContent(role string, msg *header.LLMChatHistoryEntry) any {
+	if len(msg.GetContents()) == 0 {
+		if msg.GetContent() == "" {
 			return nil
 		}
-		return content
-	case []any:
-		texttype := "input_text"
-		if role == "assistant" {
-			texttype = "output_text"
-		}
-		parts := []any{}
-		for _, parti := range content {
-			part, _ := parti.(map[string]any)
-			switch part["type"] {
-			case "text":
-				parts = append(parts, map[string]any{"type": texttype, "text": part["text"]})
-			case "image_url":
-				imageurl, _ := part["image_url"].(map[string]any)
-				parts = append(parts, map[string]any{"type": "input_image", "image_url": imageurl["url"]})
-			}
-		}
-		if len(parts) == 0 {
-			return nil
-		}
-		return parts
+		return msg.GetContent()
 	}
-	return nil
+
+	texttype := "input_text"
+	if role == "assistant" {
+		texttype = "output_text"
+	}
+	parts := []any{}
+	for _, part := range msg.GetContents() {
+		switch part.GetType() {
+		case "text":
+			parts = append(parts, map[string]any{"type": texttype, "text": part.GetText()})
+		case "image_url":
+			image := map[string]any{"type": "input_image", "image_url": part.GetImageUrl().GetUrl()}
+			if detail := part.GetImageUrl().GetDetail(); detail != "" {
+				image["detail"] = detail
+			}
+			parts = append(parts, image)
+		}
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	return parts
 }
 
-func toResponsesText(contenti any) string {
-	switch content := contenti.(type) {
-	case string:
-		return content
-	case []any:
-		text := ""
-		for _, parti := range content {
-			part, _ := parti.(map[string]any)
-			if s, _ := part["text"].(string); s != "" {
-				text += s
-			}
-		}
-		return text
+// toResponsesText returns the text of a message, contents take precedence over content
+func toResponsesText(msg *header.LLMChatHistoryEntry) string {
+	if len(msg.GetContents()) == 0 {
+		return msg.GetContent()
 	}
-	return ""
+	text := ""
+	for _, part := range msg.GetContents() {
+		text += part.GetText()
+	}
+	return text
 }
 
 type OpenAIResponsesOutputContent struct {
@@ -296,11 +258,15 @@ func toOpenAIChatResponseFromResponses(res *OpenAIResponsesResponse) *OpenAIChat
 	}
 
 	if res.Status == "failed" {
+		if out.Error == nil {
+			out.Error = &OpenAIError{Message: "response failed", Type: "server_error"}
+		}
 		return out
 	}
 
 	msg := OpenAIChatMessage{Role: "assistant"}
 	text := ""
+	hasreasoning := false
 	for _, raw := range res.Output {
 		item := OpenAIResponsesOutputItem{}
 		if err := json.Unmarshal(raw, &item); err != nil {
@@ -308,7 +274,7 @@ func toOpenAIChatResponseFromResponses(res *OpenAIResponsesResponse) *OpenAIChat
 		}
 		switch item.Type {
 		case "reasoning":
-			msg.ReasoningItems = append(msg.ReasoningItems, raw)
+			hasreasoning = true
 		case "message":
 			for _, c := range item.Content {
 				text += c.Text
@@ -324,6 +290,9 @@ func toOpenAIChatResponseFromResponses(res *OpenAIResponsesResponse) *OpenAIChat
 	}
 	if text != "" || len(msg.ToolCalls) == 0 {
 		msg.Content = &text
+	}
+	if hasreasoning {
+		msg.OutputItems = res.Output
 	}
 
 	finishreason := "stop"
@@ -347,31 +316,20 @@ func chatCompleteOpenAIResponses(ctx context.Context, apikey string, request Com
 	if err != nil {
 		return nil, err
 	}
-	url := "https://api.openai.com/v1/responses"
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(requestb))
+	output, err := postOpenAI(ctx, "https://api.openai.com/v1/responses", apikey, requestb, "responses")
 	if err != nil {
-		return nil, log.EServer(err)
-	}
-	req.Header.Set("Authorization", "Bearer "+apikey)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	output := buf.Bytes()
-
-	if resp.StatusCode != 200 {
-		// error body has the same {"error": {...}} shape as chat completion
-		return output, log.EProvider(nil, "openai", "responses", log.M{"status": resp.StatusCode, "_payload": output})
+		return output, err
 	}
 
 	res := &OpenAIResponsesResponse{}
 	if err := json.Unmarshal(output, res); err != nil {
 		return nil, log.EProvider(err, "openai", "responses", log.M{"_payload": output})
 	}
-	return json.Marshal(toOpenAIChatResponseFromResponses(res))
+
+	chat := toOpenAIChatResponseFromResponses(res)
+	chatb, _ := json.Marshal(chat)
+	if chat.Error != nil {
+		return chatb, log.EProvider(nil, "openai", "responses", log.M{"_payload": output})
+	}
+	return chatb, nil
 }

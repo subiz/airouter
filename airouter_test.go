@@ -502,6 +502,16 @@ func TestCost(t *testing.T) {
 		}
 	})
 
+	t.Run("cache_write_breakdown_only", func(t *testing.T) {
+		// 4000 12h writes reported only in the breakdown, must not be billed as uncached input
+		usage := &Usage{PromptTokens: 5000, PromptTokensDetails: &PromptTokensDetails{
+			CacheWriteTokensDetails: &CacheWriteTokensDetails{Ttl12hTokens: 4000},
+		}}
+		if cost := CalculateCost("gpt-6-luna", usage, ""); cost != 100_000+1_000_000 {
+			t.Errorf("cache write breakdown cost, got %d", cost)
+		}
+	})
+
 	t.Run("long_context", func(t *testing.T) {
 		// <= 272K: $0.10 input, $0.01 cached, $0.50 output per 1M tokens
 		short := &Usage{PromptTokens: 272_000, CompletionTokens: 1000, PromptTokensDetails: &PromptTokensDetails{CachedTokens: 72_000}}
