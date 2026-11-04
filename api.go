@@ -464,6 +464,17 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 			}
 		}
 
+		if fields, ok := msg["fields"].(map[string]any); ok {
+			if _, has := fields[reasoningItemsField]; has {
+				// only used by the Responses API
+				delete(fields, reasoningItemsField)
+				if len(fields) == 0 {
+					delete(msg, "fields")
+				}
+				changed = true
+			}
+		}
+
 		contentsi, has := msg["contents"]
 		if has {
 			if arr, ok := contentsi.([]any); ok {
@@ -510,14 +521,6 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 			// Function tools with reasoning_effort are not supported for gpt-5.4-nano in /v1/chat/completions. Please use /v1/responses instead.
 			if len(req.Tools) > 0 {
 				delete(m, "reasoning_effort")
-				changed = true
-			}
-		}
-
-		if model == "gpt-6-luna" {
-			// Chat Completions supports function calling only with reasoning_effort set to none.
-			if len(req.Tools) > 0 {
-				m["reasoning_effort"] = "none"
 				changed = true
 			}
 		}
@@ -872,6 +875,10 @@ func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionI
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, 15*time.Minute)
 		defer cancel()
+	}
+
+	if useOpenAIResponsesAPI(request) {
+		return chatCompleteOpenAIResponses(ctx, apikey, request)
 	}
 
 	var err error

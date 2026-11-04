@@ -343,6 +343,8 @@ type OpenAIChatMessage struct {
 	ToolCalls  []ToolCall             `json:"tool_calls,omitempty"`
 	ToolCallId string                 `json:"tool_call_id,omitempty"`
 	Refusal    string                 `json:"refusal,omitempty"`
+
+	ReasoningItems []json.RawMessage `json:"reasoning_items,omitempty"` // our field, not openai. Responses API reasoning items
 }
 
 type OpenAIMessageContentImageUrl struct {
@@ -408,6 +410,16 @@ type OpenAIChoice struct {
 // PromptTokensDetails mimics the structure of the prompt_tokens_details field.
 type PromptTokensDetails struct {
 	CachedTokens int64 `json:"cached_tokens"`
+
+	// gpt-5.6+ models, prompt tokens = uncached + cached + cache write tokens
+	CacheWriteTokens        int64                    `json:"cache_write_tokens,omitempty"`
+	CacheWriteTokensDetails *CacheWriteTokensDetails `json:"cache_write_tokens_details,omitempty"`
+}
+
+// CacheWriteTokensDetails breaks cache write tokens down by cache lifetime, only reported by the Responses API
+type CacheWriteTokensDetails struct {
+	Ttl30mTokens int64 `json:"ttl_30m_tokens"`
+	Ttl12hTokens int64 `json:"ttl_12h_tokens"`
 }
 
 // Usage mimics the structure of the usage field in an OpenAI Chat Completion response.
@@ -464,10 +476,15 @@ func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 	}
 
 	inputtoken := usage.PromptTokens
-	var cachedtoken int64
-	if usage.PromptTokensDetails != nil {
-		inputtoken -= usage.PromptTokensDetails.CachedTokens
-		cachedtoken = usage.PromptTokensDetails.CachedTokens
+	var cachedtoken, cachewrite30mtoken, cachewrite12htoken int64
+	if details := usage.PromptTokensDetails; details != nil {
+		cachedtoken = details.CachedTokens
+		// writes without a breakdown use the default 30m lifetime (the only one chat completion supports)
+		if details.CacheWriteTokensDetails != nil {
+			cachewrite12htoken = details.CacheWriteTokensDetails.Ttl12hTokens
+		}
+		cachewrite30mtoken = details.CacheWriteTokens - cachewrite12htoken
+		inputtoken -= cachedtoken + details.CacheWriteTokens
 	}
 	outputtoken := usage.CompletionTokens
 	stdmodel := ToModel(model)
@@ -479,8 +496,11 @@ func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 		cachedprice = llmmodellongcachedprice[stdmodel]
 		outputprice = llmmodellongoutputprice[stdmodel]
 	}
+	// cache writes cost 1.25x (30m) or 2.5x (12h) the uncached input price
 	cost := 1000 * (float64(inputtoken)*inputprice +
 		float64(cachedtoken)*cachedprice +
+		float64(cachewrite30mtoken)*inputprice*1.25 +
+		float64(cachewrite12htoken)*inputprice*2.5 +
 		float64(outputtoken)*outputprice)
 	if service_tier == "flex" {
 		cost = cost / 2
@@ -670,13 +690,19 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		}
 		input.ToolChoice = "" // reset tool choice
 		c0 := completion.Choices[0].Message
-		input.Messages = append(input.Messages, &header.LLMChatHistoryEntry{
+		assistantmsg := &header.LLMChatHistoryEntry{
 			Role:       c0.Role,
 			Name:       c0.Name,
 			ToolCallId: c0.ToolCallId,
 			Refusal:    c0.Refusal,
 			ToolCalls:  toOurToolCalls(c0.ToolCalls),
-		})
+		}
+		if len(c0.ReasoningItems) > 0 {
+			// keep the reasoning so the model can continue it after the tool calls
+			itemsb, _ := json.Marshal(c0.ReasoningItems)
+			assistantmsg.Fields = map[string]string{reasoningItemsField: string(itemsb)}
+		}
+		input.Messages = append(input.Messages, assistantmsg)
 
 		tooloutmsgs := []*header.LLMChatHistoryEntry{}
 		executor.Async(len(toolCalls), func(i int, lock *sync.Mutex) {
@@ -843,7 +869,15 @@ func GetEmbedding(ctx context.Context, accid, model string, text string) ([]floa
 func sendPOST(ctx context.Context, url, token string, payload []byte) (*http.Response, []byte, error) {
 	if strings.HasPrefix(url, "https://test/") {
 		status, body := FakeBackend(url, payload)
-		return &http.Response{StatusCode: status}, body, nil
+		header := http.Header{}
+		if strings.HasPrefix(url, "https://test/completions") {
+			// mimic the server, which reports the cost in x-cost-usd
+			res := OpenAIChatResponse{}
+			if json.Unmarshal(body, &res) == nil && res.Usage != nil {
+				header.Set("X-Cost-USD", strconv.FormatFloat(float64(res.Usage.KFpvCostUSD)/1000, 'f', -1, 64))
+			}
+		}
+		return &http.Response{StatusCode: status, Header: header}, body, nil
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))

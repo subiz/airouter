@@ -1,0 +1,253 @@
+package airouter
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"math"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/subiz/header"
+)
+
+func TestUseOpenAIResponsesAPI(t *testing.T) {
+	tools := []OpenAITool{{Type: "function", Function: &Function{Name: "get_weather"}}}
+	cases := []struct {
+		input CompletionInput
+		want  bool
+	}{
+		{CompletionInput{Model: "gpt-6-luna", Tools: tools, ReasoningEffort: "low"}, true},
+		{CompletionInput{Model: "gpt-5.4-mini", Tools: tools, Reasoning: &CompletionReasoning{Effort: "medium"}}, true},
+		{CompletionInput{Model: "gpt-6-luna", Tools: tools, ReasoningEffort: "none"}, true},
+		{CompletionInput{Model: "gpt-6-luna"}, true},
+		{CompletionInput{Model: "gpt-5.4-mini", Tools: tools, ReasoningEffort: "none"}, false},
+		{CompletionInput{Model: "gpt-5.4-nano", Tools: tools}, false},
+		{CompletionInput{Model: "gpt-5.4-mini", ReasoningEffort: "low"}, false},
+		{CompletionInput{Model: "gpt-5", Tools: tools, ReasoningEffort: "low"}, false},
+	}
+	for i, c := range cases {
+		if got := useOpenAIResponsesAPI(c.input); got != c.want {
+			t.Errorf("case %d: expect %v, got %v", i, c.want, got)
+		}
+	}
+}
+
+func TestToOpenAIResponsesJSON(t *testing.T) {
+	reasoning := `[{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc"}]`
+	input := CompletionInput{
+		Model:               "gpt-6-luna",
+		Instruct:            "be nice",
+		ReasoningEffort:     "low",
+		MaxCompletionTokens: 100,
+		Temperature:         0.5,
+		Stop:                []string{"x"},
+		Tools: []OpenAITool{{Type: "function", Function: &Function{
+			Name:        "get_weather",
+			Description: "get weather",
+			Parameters:  &header.JSONSchema{Type: "object"},
+		}}},
+		Messages: []*header.LLMChatHistoryEntry{
+			{Role: "user", Content: "weather in hanoi?"},
+			{
+				Role:      "assistant",
+				ToolCalls: []*header.LLMToolCall{{Id: "call_1", Type: "function", Function: &header.LLMToolFunction{Name: "get_weather", Arguments: `{"city":"hanoi"}`}}},
+				Fields:    map[string]string{reasoningItemsField: reasoning},
+			},
+			{Role: "tool", ToolCallId: "call_1", Content: "30C"},
+		},
+	}
+
+	b, err := ToOpenAIResponsesJSON(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual := map[string]any{}
+	json.Unmarshal(b, &actual)
+
+	expected := map[string]any{}
+	json.Unmarshal([]byte(`{
+		"model": "gpt-6-luna",
+		"store": false,
+		"include": ["reasoning.encrypted_content"],
+		"prompt_cache_options": {"ttl": "12h"},
+		"max_output_tokens": 100,
+		"reasoning": {"effort": "low"},
+		"tools": [{"type": "function", "strict": false, "name": "get_weather", "description": "get weather", "parameters": {"type": "object", "additionalProperties": false}}],
+		"input": [
+			{"role": "system", "content": "be nice"},
+			{"role": "user", "content": "weather in hanoi?"},
+			{"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "enc"},
+			{"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{\"city\":\"hanoi\"}"},
+			{"type": "function_call_output", "call_id": "call_1", "output": "30C"}
+		]
+	}`), &expected)
+
+	if !cmp.Equal(expected, actual) {
+		t.Errorf("Responses request mismatch (-want +got):\n%s", cmp.Diff(expected, actual))
+	}
+
+	// chat completions must not receive our reasoning field
+	chatb, _ := ToOpenAICompletionJSON(input)
+	if strings.Contains(string(chatb), reasoningItemsField) {
+		t.Errorf("chat completion request should not contain %s: %s", reasoningItemsField, chatb)
+	}
+}
+
+func TestToOpenAIChatResponseFromResponses(t *testing.T) {
+	output := `{
+		"id": "resp_1", "created_at": 1700000000, "model": "gpt-6-luna", "status": "completed", "service_tier": "default",
+		"output": [
+			{"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "enc"},
+			{"type": "function_call", "id": "fc_1", "call_id": "call_1", "name": "get_weather", "arguments": "{}", "status": "completed"}
+		],
+		"usage": {"input_tokens": 300000, "input_tokens_details": {"cached_tokens": 100000}, "output_tokens": 1000, "total_tokens": 301000},
+		"error": null
+	}`
+	res := &OpenAIResponsesResponse{}
+	if err := json.Unmarshal([]byte(output), res); err != nil {
+		t.Fatal(err)
+	}
+	chat := toOpenAIChatResponseFromResponses(res)
+	if len(chat.Choices) != 1 || chat.Choices[0].FinishReason != "tool_calls" {
+		t.Fatalf("unexpected choices %+v", chat.Choices)
+	}
+	msg := chat.Choices[0].Message
+	if msg.Content != nil || len(msg.ToolCalls) != 1 || msg.ToolCalls[0].ID != "call_1" || msg.ToolCalls[0].Function.Name != "get_weather" {
+		t.Errorf("unexpected message %+v", msg)
+	}
+	if len(msg.ReasoningItems) != 1 || !strings.Contains(string(msg.ReasoningItems[0]), `"enc"`) {
+		t.Errorf("unexpected reasoning items %s", msg.ReasoningItems)
+	}
+	if cost := CalculateCost(res.Model, chat.Usage, chat.ServiceTier); cost != 40_000_000+2_000_000+750_000 {
+		t.Errorf("unexpected cost %d", cost)
+	}
+
+	text := `{"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"},
+		"output": [{"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "hel"}]}]}`
+	res = &OpenAIResponsesResponse{}
+	json.Unmarshal([]byte(text), res)
+	chat = toOpenAIChatResponseFromResponses(res)
+	if chat.Choices[0].Message.GetContent() != "hel" || chat.Choices[0].FinishReason != "length" {
+		t.Errorf("unexpected choice %+v", chat.Choices[0])
+	}
+}
+
+func TestCompleteToolsWithReasoning(t *testing.T) {
+	if os.Getenv("CHATGPT_API_KEY") == "" {
+		t.Skip("CHATGPT_API_KEY is not set")
+	}
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
+	BACKEND = "https://test"
+
+	for _, model := range []string{Gpt_6_luna, Gpt_5_4_mini} {
+		t.Run(model, func(t *testing.T) {
+			called := 0
+			input := CompletionInput{
+				Model:           model,
+				ReasoningEffort: "low",
+				NoLog:           true,
+				Seed:            int(time.Now().UnixNano() % 1000000), // bypass the local cache
+				Messages:        []*header.LLMChatHistoryEntry{{Role: "user", Content: "What is the weather in Hanoi? Answer with the temperature only."}},
+				Tools: []OpenAITool{{Type: "function", Function: &Function{
+					Name:        "get_weather",
+					Description: "get the current weather of a city",
+					Parameters: &header.JSONSchema{
+						Type:       "object",
+						Required:   []string{"city"},
+						Properties: map[string]*header.JSONSchema{"city": {Type: "string"}},
+					},
+					Handler: func(ctx context.Context, arg, callid string, ctxm map[string]any) string {
+						called++
+						return "31C, sunny"
+					},
+				}}},
+			}
+
+			content, output, err := Complete(context.Background(), "", input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if called == 0 {
+				t.Fatalf("tool was not called, content %q", content)
+			}
+			if !strings.Contains(content, "31") {
+				t.Errorf("unexpected content %q", content)
+			}
+			// the model may skip reasoning on easy prompts, so only log whether it was carried over
+			hasreasoning := strings.Contains(string(output.Request), reasoningItemsField)
+
+			// cost reported by the (fake) server must match the token usage
+			expected := CalculateCost(model, &Usage{PromptTokens: output.InputTokens, CompletionTokens: output.OutputTokens}, "")
+			if output.KfpvCostUSD <= 0 || math.Abs(float64(output.KfpvCostUSD-expected)) > 10 {
+				t.Errorf("expect cost about %d, got %d", expected, output.KfpvCostUSD)
+			}
+			t.Logf("reasoning carried over %v", hasreasoning)
+			t.Logf("content %q, input %d, output %d tokens, cost %d kfpvusd", content, output.InputTokens, output.OutputTokens, output.KfpvCostUSD)
+		})
+	}
+}
+
+func TestToOpenAIResponsesJSONParams(t *testing.T) {
+	tools := []OpenAITool{{Type: "function", Function: &Function{Name: "get_weather"}}}
+
+	// gpt-5.4 keeps prompt_cache_retention, drops sampling params when reasoning
+	b, _ := ToOpenAIResponsesJSON(CompletionInput{Model: "gpt-5.4-mini", Tools: tools, ReasoningEffort: "low", Temperature: 0.5})
+	m := map[string]any{}
+	json.Unmarshal(b, &m)
+	if m["prompt_cache_retention"] != "24h" || m["prompt_cache_options"] != nil || m["temperature"] != nil {
+		t.Errorf("unexpected gpt-5.4-mini request %s", b)
+	}
+
+	// gpt-6-luna without reasoning keeps sampling params
+	b, _ = ToOpenAIResponsesJSON(CompletionInput{Model: "gpt-6-luna", ReasoningEffort: "none", Temperature: 0.5, TopP: 0.9})
+	m = map[string]any{}
+	json.Unmarshal(b, &m)
+	if m["temperature"] != 0.5 || m["top_p"] != 0.9 || m["prompt_cache_retention"] != nil {
+		t.Errorf("unexpected gpt-6-luna request %s", b)
+	}
+}
+
+func TestLunaPromptCache12h(t *testing.T) {
+	if os.Getenv("CHATGPT_API_KEY") == "" {
+		t.Skip("CHATGPT_API_KEY is not set")
+	}
+	InitAPI(os.Getenv("GEMINI_API_KEY"), os.Getenv("CHATGPT_API_KEY"))
+
+	// unique long prefix, so the first call writes the cache and the second one reads it
+	instruct := fmt.Sprint(time.Now().UnixNano()) + " " + strings.Repeat("The quick brown fox jumps over the lazy dog. ", 300)
+	for i := range 2 {
+		payload, _ := json.Marshal(CompletionInput{
+			Model:               Gpt_6_luna,
+			Instruct:            instruct,
+			MaxCompletionTokens: 50,
+			Messages:            []*header.LLMChatHistoryEntry{{Role: "user", Content: "say hi"}},
+		})
+		resp, err := ChatCompleteAPI(context.Background(), payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		usage := resp.Usage
+		details := usage.PromptTokensDetails
+		if details == nil {
+			t.Fatalf("call %d: no prompt tokens details", i)
+		}
+		if i == 0 && (details.CacheWriteTokensDetails == nil || details.CacheWriteTokensDetails.Ttl12hTokens == 0) {
+			t.Errorf("call %d: expect 12h cache writes, got %+v", i, details)
+		}
+		if i == 1 && details.CachedTokens == 0 {
+			t.Errorf("call %d: expect cache reads, got %+v", i, details)
+		}
+
+		uncached := usage.PromptTokens - details.CachedTokens - details.CacheWriteTokens
+		expected := 100*float64(uncached) + 10*float64(details.CachedTokens) + 250*float64(details.CacheWriteTokens) + 500*float64(usage.CompletionTokens)
+		if math.Abs(float64(usage.KFpvCostUSD)-expected) > 1 {
+			t.Errorf("call %d: expect cost %.0f, got %d", i, expected, usage.KFpvCostUSD)
+		}
+		t.Logf("call %d: prompt %d, cached %d, write %d, output %d, cost %d kfpvusd", i, usage.PromptTokens, details.CachedTokens, details.CacheWriteTokens, usage.CompletionTokens, usage.KFpvCostUSD)
+		time.Sleep(2 * time.Second)
+	}
+}

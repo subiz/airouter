@@ -483,6 +483,25 @@ func TestCost(t *testing.T) {
 		}
 	})
 
+	t.Run("cache_write", func(t *testing.T) {
+		// 1000 uncached x $0.10, 2000 cached x $0.01, 3000 30m writes x $0.125, 4000 12h writes x $0.25, 100 output x $0.50
+		usage := &Usage{PromptTokens: 10_000, CompletionTokens: 100, PromptTokensDetails: &PromptTokensDetails{
+			CachedTokens:            2000,
+			CacheWriteTokens:        7000,
+			CacheWriteTokensDetails: &CacheWriteTokensDetails{Ttl30mTokens: 3000, Ttl12hTokens: 4000},
+		}}
+		if cost := CalculateCost("gpt-6-luna", usage, ""); cost != 100_000+20_000+375_000+1_000_000+50_000 {
+			t.Errorf("cache write cost, got %d", cost)
+		}
+
+		// chat completion reports writes without the breakdown, they are 30m writes
+		usage = &Usage{PromptTokens: 3022, CompletionTokens: 7, PromptTokensDetails: &PromptTokensDetails{CacheWriteTokens: 3019}}
+		// allow 1 kfpvusd of float rounding
+		if cost := CalculateCost("gpt-6-luna", usage, ""); math.Abs(float64(cost)-(3*100+3019*125+7*500)) > 1 {
+			t.Errorf("chat cache write cost, got %d", cost)
+		}
+	})
+
 	t.Run("long_context", func(t *testing.T) {
 		// <= 272K: $0.10 input, $0.01 cached, $0.50 output per 1M tokens
 		short := &Usage{PromptTokens: 272_000, CompletionTokens: 1000, PromptTokensDetails: &PromptTokensDetails{CachedTokens: 72_000}}
