@@ -268,6 +268,8 @@ var llmmodelinputprice = map[string]float64{
 	"gpt-6-luna":   0.1,
 	"gpt-5.4-nano": 0.2,
 	"gpt-5.4-mini": 0.75,
+	"o3":           2,
+	"o4-mini":      1.1,
 
 	"gemini-2.5-flash":      0.3,
 	"gemini-3-flash":        0.5,
@@ -292,6 +294,8 @@ var llmmodeloutputprice = map[string]float64{
 	"gpt-5.4-nano": 1.25,
 	"gpt-5.4-mini": 4.5,
 	"gpt-6-luna":   0.5,
+	"o3":           8,
+	"o4-mini":      4.4,
 
 	"gemini-2.5-flash-lite": 0.4,
 	"gemini-3.1-flash-lite": 1.5,
@@ -304,7 +308,7 @@ var llmmodeloutputprice = map[string]float64{
 
 // per 1M tokens
 var llmmodelcachedprice = map[string]float64{
-	"gpt-4.1":      8,
+	"gpt-4.1":      0.5,
 	"gpt-4.1-mini": 0.1,
 	"gpt-4.1-nano": 0.025,
 	"gpt-4o":       1.25,
@@ -315,11 +319,13 @@ var llmmodelcachedprice = map[string]float64{
 	"gpt-5.4-nano": 0.02,
 	"gpt-5.4-mini": 0.075,
 	"gpt-6-luna":   0.01,
+	"o3":           0.5,
+	"o4-mini":      0.275,
 
 	"gemini-2.5-flash":      0.03,
 	"gemini-2.5-flash-lite": 0.01,
 	"gemini-3.1-flash-lite": 0.025,
-	"gemini-2.5-pro":        11.25,
+	"gemini-2.5-pro":        0.25,
 	"gemini-3.5-flash":      0.15,
 	"gemma-4-31b-it":        0.015,
 	"gemma-4-26b-a4b-it":    0.015,
@@ -344,7 +350,7 @@ type OpenAIChatMessage struct {
 	ToolCallId string                 `json:"tool_call_id,omitempty"`
 	Refusal    string                 `json:"refusal,omitempty"`
 
-	ReasoningItems []json.RawMessage `json:"reasoning_items,omitempty"` // our field, not openai. Responses API reasoning items
+	OutputItems []json.RawMessage `json:"response_output_items,omitempty"` // our field, not openai. Responses API output items, only set when there is reasoning
 }
 
 type OpenAIMessageContentImageUrl struct {
@@ -480,11 +486,13 @@ func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 	if details := usage.PromptTokensDetails; details != nil {
 		cachedtoken = details.CachedTokens
 		// writes without a breakdown use the default 30m lifetime (the only one chat completion supports)
-		if details.CacheWriteTokensDetails != nil {
-			cachewrite12htoken = details.CacheWriteTokensDetails.Ttl12hTokens
+		cachewritetoken := details.CacheWriteTokens
+		if wd := details.CacheWriteTokensDetails; wd != nil {
+			cachewrite12htoken = wd.Ttl12hTokens
+			cachewritetoken = max(cachewritetoken, wd.Ttl30mTokens+wd.Ttl12hTokens)
 		}
-		cachewrite30mtoken = details.CacheWriteTokens - cachewrite12htoken
-		inputtoken -= cachedtoken + details.CacheWriteTokens
+		cachewrite30mtoken = cachewritetoken - cachewrite12htoken
+		inputtoken -= cachedtoken + cachewritetoken
 	}
 	outputtoken := usage.CompletionTokens
 	stdmodel := ToModel(model)
@@ -692,15 +700,16 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		c0 := completion.Choices[0].Message
 		assistantmsg := &header.LLMChatHistoryEntry{
 			Role:       c0.Role,
+			Content:    c0.GetContent(),
 			Name:       c0.Name,
 			ToolCallId: c0.ToolCallId,
 			Refusal:    c0.Refusal,
 			ToolCalls:  toOurToolCalls(c0.ToolCalls),
 		}
-		if len(c0.ReasoningItems) > 0 {
+		if len(c0.OutputItems) > 0 {
 			// keep the reasoning so the model can continue it after the tool calls
-			itemsb, _ := json.Marshal(c0.ReasoningItems)
-			assistantmsg.Fields = map[string]string{reasoningItemsField: string(itemsb)}
+			itemsb, _ := json.Marshal(c0.OutputItems)
+			assistantmsg.Fields = map[string]string{outputItemsField: string(itemsb)}
 		}
 		input.Messages = append(input.Messages, assistantmsg)
 
@@ -746,12 +755,15 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		Request:     requestbody,
 		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
 		Created:     start.UnixMilli(),
-		KfpvCostUSD: int64(totalCost * 1000),
+		KfpvCostUSD: int64(math.Round(totalCost * 1000)),
 	}
 
 	for _, tokenUsage := range tokenUsages {
 		completionoutput.InputTokens += tokenUsage.PromptTokens
 		completionoutput.OutputTokens += tokenUsage.CompletionTokens
+		if tokenUsage.PromptTokensDetails != nil {
+			completionoutput.InputCachedTokens += tokenUsage.PromptTokensDetails.CachedTokens
+		}
 	}
 
 	if len(completion.Choices) > 0 {
@@ -761,7 +773,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 	}
 
 	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
-		totalprice.USD += int64(totalCost * 1000)
+		totalprice.USD += completionoutput.KfpvCostUSD
 	}
 
 	if !input.NoLog {
@@ -851,7 +863,7 @@ func GetEmbedding(ctx context.Context, accid, model string, text string) ([]floa
 		Text:        text,
 		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
 		Created:     start.UnixMilli(),
-		KfpvCostUSD: int64(pricef * 1000),
+		KfpvCostUSD: int64(math.Round(pricef * 1000)),
 	}
 
 	if len(response.Data) > 0 {
@@ -859,7 +871,7 @@ func GetEmbedding(ctx context.Context, accid, model string, text string) ([]floa
 	}
 
 	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
-		totalprice.USD += int64(pricef * 1000)
+		totalprice.USD += int64(math.Round(pricef * 1000))
 	}
 	cache, _ = json.Marshal(embeddingoutput)
 	os.WriteFile(cachepath, cache, 0644)
@@ -1076,11 +1088,11 @@ func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord)
 		Records:     response.Records,
 		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
 		Created:     start.UnixMilli(),
-		KfpvCostUSD: int64(pricef * 1000),
+		KfpvCostUSD: int64(math.Round(pricef * 1000)),
 	}
 
 	if totalprice, _ := ctx.Value("total_cost").(*TotalCost); totalprice != nil {
-		totalprice.USD += int64(pricef * 1000)
+		totalprice.USD += int64(math.Round(pricef * 1000))
 	}
 	cache, _ = json.Marshal(rerankoutput)
 	os.WriteFile(cachepath, cache, 0644)

@@ -147,6 +147,25 @@ func TestModelAliases(t *testing.T) {
 	}
 }
 
+// every standardized chat model must have a price, or it would be billed 0
+func TestChatModelPrices(t *testing.T) {
+	models := []string{Gpt_4o_mini, Gpt_4o, Gpt_4_1_mini, Gpt_5_mini, Gpt_5_nano, Gpt_5, Gpt_4_1_nano, Gpt_4_1,
+		Gpt_5_4_nano, Gpt_5_4_mini, Gpt_6_luna, O3, O4_mini, Gemini_2_5_pro, Gemini_2_5_flash, Gemini_2_5_flash_lite,
+		Gemini_3_1_flash_lite, Gemma_4_31b_it, Gemma_4_26b_a4b_it}
+	for _, model := range models {
+		if ToModel(model) != model {
+			t.Errorf("%s is not a standardized model", model)
+		}
+		input, cached, output := llmmodelinputprice[model], llmmodelcachedprice[model], llmmodeloutputprice[model]
+		if input <= 0 || cached <= 0 || output <= 0 {
+			t.Errorf("%s: missing price, input %v, cached %v, output %v", model, input, cached, output)
+		}
+		if cached > input {
+			t.Errorf("%s: cached price %v must not exceed input price %v", model, cached, input)
+		}
+	}
+}
+
 func TestGemmaRequestConversion(t *testing.T) {
 	req := CompletionInput{
 		Model:           Gemma_4_31b_it,
@@ -499,6 +518,16 @@ func TestCost(t *testing.T) {
 		// allow 1 kfpvusd of float rounding
 		if cost := CalculateCost("gpt-6-luna", usage, ""); math.Abs(float64(cost)-(3*100+3019*125+7*500)) > 1 {
 			t.Errorf("chat cache write cost, got %d", cost)
+		}
+	})
+
+	t.Run("cache_write_breakdown_only", func(t *testing.T) {
+		// 4000 12h writes reported only in the breakdown, must not be billed as uncached input
+		usage := &Usage{PromptTokens: 5000, PromptTokensDetails: &PromptTokensDetails{
+			CacheWriteTokensDetails: &CacheWriteTokensDetails{Ttl12hTokens: 4000},
+		}}
+		if cost := CalculateCost("gpt-6-luna", usage, ""); cost != 100_000+1_000_000 {
+			t.Errorf("cache write breakdown cost, got %d", cost)
 		}
 	})
 
