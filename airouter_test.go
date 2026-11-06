@@ -794,3 +794,27 @@ func TestOpenAIMaxCompletionOutput(t *testing.T) {
 		t.Errorf("Expected completion tokens to be around %d, but got %d", maxTokens, resp.Usage.CompletionTokens)
 	}
 }
+
+func TestValidText(t *testing.T) {
+	cases := map[string]string{
+		"Ô TR\x14N - THƯỢNG HẢI":    "Ô TRN - THƯỢNG HẢI",
+		"a\tb\nc\r\nd":              "a\tb\nc\r\nd",
+		"bad\xffutf8\x00\u009f end": "badutf8 end",
+		"Bắc Kinh 🇻🇳":               "Bắc Kinh 🇻🇳",
+	}
+	for in, want := range cases {
+		if got := ValidText(in); got != want {
+			t.Errorf("ValidText(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestSanitizeCompletionMakesJSONParsable(t *testing.T) {
+	content := "{\"answer\": \"Ô TR\x14N\"}"
+	completion := &OpenAIChatResponse{Choices: []OpenAIChoice{{Message: OpenAIChatMessage{Content: &content}}}}
+	sanitizeCompletion(completion)
+	var out struct{ Answer string }
+	if err := json.Unmarshal([]byte(completion.Choices[0].Message.GetContent()), &out); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -116,6 +116,44 @@ func main() {
 }
 ```
 
+### Prompt Caching for `gpt-6-luna`
+
+`gpt-6-luna` (like other gpt-5.6+ models) caches the prompt only at **breakpoints**, not at any shared prefix. A request reads the cache only when everything up to one of its breakpoints is byte-identical to an earlier request, so changing a single character before the breakpoint misses it.
+
+By default the model places one implicit breakpoint at the end of the latest user message. When only the question at the end changes (same instruct and documents), that breakpoint never matches, every request writes the whole prompt again, and cache writes cost 1.25x the input price. The router does not place any breakpoint by itself, the client decides what is cached:
+
+- **`prompt_cache_key`**: required by gpt-5.6+ models for reliable matching. When the client sends none, the router uses `md5(model + "." + instruct)`. Send your own key (e.g. per document) for high traffic, a single key receiving many requests per minute spreads over several machines and misses more.
+- **Client breakpoints**: put the stable part (instruct, documents) before the changing part (question) and mark the end of the stable part. The cached prefix runs from the start of the request through the end of the marked message or block (inclusive).
+
+```json
+{
+  "model": "gpt-6-luna",
+  "prompt_cache_key": "doc-240147sgo",
+  "instruct": "...",
+  "messages": [
+    { "role": "user", "content": "<document>", "cache_breakpoint": true },
+    { "role": "user", "contents": [
+      { "type": "text", "text": "<catalog>", "prompt_cache_breakpoint": { "ttl": "12h" } },
+      { "type": "text", "text": "<history>" }
+    ]},
+    { "role": "user", "content": "<question>" }
+  ]
+}
+```
+
+| Field | Where | Effect |
+|-------|-------|--------|
+| `cache_breakpoint: true` | message | breakpoint at the end of the message (its last text block), default 30m ttl |
+| `prompt_cache_breakpoint: {mode, ttl}` | `contents` text block | breakpoint at the end of that block, `mode` defaults to `explicit`, `ttl` is `30m` or `12h` |
+
+Rules:
+
+- A breakpoint must sit on a message with text. An empty marker message is dropped. Breakpoints on `assistant` and `tool` messages are ignored, only input text blocks accept them.
+- At most 4 cache writes per request. The implicit breakpoint takes one, leaving 3 for the client.
+- The prefix through a breakpoint must be at least 1,024 tokens to be cached.
+- Cache writes cost 1.25x (30m) or 2.5x (12h) the input price, cache reads 0.05x.
+- Other models never receive the breakpoint fields (older OpenAI models, chat completions, Gemini).
+
 ## Supported Models
 
 ### Chat Completion

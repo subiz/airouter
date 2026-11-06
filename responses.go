@@ -49,6 +49,9 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 	}
 	if req.PromptCacheKey != "" {
 		out["prompt_cache_key"] = req.PromptCacheKey
+	} else if model == Gpt_6_luna {
+		// gpt-5.6+ models only match caches reliably with a prompt_cache_key
+		out["prompt_cache_key"] = GetMD5Hash(model + "." + req.Instruct)
 	}
 	if req.ServiceTier != "" {
 		out["service_tier"] = req.ServiceTier
@@ -137,7 +140,7 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 			}
 		}
 
-		if content := toResponsesContent(role, msg); content != nil {
+		if content := toResponsesContent(role, msg, model == Gpt_6_luna); content != nil {
 			input = append(input, map[string]any{"role": role, "content": content})
 		}
 
@@ -155,11 +158,18 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 }
 
 // toResponsesContent converts a message content to a Responses API message content,
-// returns nil if the message has no content
-func toResponsesContent(role string, msg *header.LLMChatHistoryEntry) any {
+// returns nil if the message has no content. When cache is set (gpt-5.6+ models), it copies the
+// client cache breakpoints: cache_breakpoint marks the last text block of the message,
+// prompt_cache_breakpoint marks its own text block. Only input_text blocks accept breakpoints, so
+// they are ignored on assistant messages
+func toResponsesContent(role string, msg *header.LLMChatHistoryEntry, cache bool) any {
+	cache = cache && role != "assistant"
 	if len(msg.GetContents()) == 0 {
 		if msg.GetContent() == "" {
 			return nil
+		}
+		if cache && msg.GetCacheBreakpoint() {
+			return []any{map[string]any{"type": "input_text", "text": msg.GetContent(), "prompt_cache_breakpoint": map[string]any{"mode": "explicit"}}}
 		}
 		return msg.GetContent()
 	}
@@ -169,10 +179,16 @@ func toResponsesContent(role string, msg *header.LLMChatHistoryEntry) any {
 		texttype = "output_text"
 	}
 	parts := []any{}
+	var lasttext map[string]any
 	for _, part := range msg.GetContents() {
 		switch part.GetType() {
 		case "text":
-			parts = append(parts, map[string]any{"type": texttype, "text": part.GetText()})
+			text := map[string]any{"type": texttype, "text": part.GetText()}
+			if bp := part.GetPromptCacheBreakpoint(); cache && bp != nil {
+				text["prompt_cache_breakpoint"] = toResponsesBreakpoint(bp)
+			}
+			parts = append(parts, text)
+			lasttext = text
 		case "image_url":
 			image := map[string]any{"type": "input_image", "image_url": part.GetImageUrl().GetUrl()}
 			if detail := part.GetImageUrl().GetDetail(); detail != "" {
@@ -184,7 +200,22 @@ func toResponsesContent(role string, msg *header.LLMChatHistoryEntry) any {
 	if len(parts) == 0 {
 		return nil
 	}
+	if cache && msg.GetCacheBreakpoint() && lasttext != nil && lasttext["prompt_cache_breakpoint"] == nil {
+		lasttext["prompt_cache_breakpoint"] = map[string]any{"mode": "explicit"}
+	}
 	return parts
+}
+
+// toResponsesBreakpoint converts a client breakpoint, mode defaults to explicit
+func toResponsesBreakpoint(bp *header.OpenAIMessageContentPromptCacheBreakpoint) map[string]any {
+	out := map[string]any{"mode": "explicit"}
+	if bp.GetMode() != "" {
+		out["mode"] = bp.GetMode()
+	}
+	if bp.GetTtl() != "" {
+		out["ttl"] = bp.GetTtl()
+	}
+	return out
 }
 
 // toResponsesText returns the text of a message, contents take precedence over content

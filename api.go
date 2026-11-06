@@ -518,9 +518,20 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 			}
 		}
 
+		// cache breakpoints are only used by the Responses API
+		if _, has := msg["cache_breakpoint"]; has {
+			delete(msg, "cache_breakpoint")
+			changed = true
+		}
+
 		contentsi, has := msg["contents"]
 		if has {
 			if arr, ok := contentsi.([]any); ok {
+				for _, parti := range arr {
+					if part, ok := parti.(map[string]any); ok {
+						delete(part, "prompt_cache_breakpoint")
+					}
+				}
 				if len(arr) > 0 {
 					msg["content"] = contentsi
 				}

@@ -89,6 +89,7 @@ func TestToOpenAIResponsesJSON(t *testing.T) {
 		"store": false,
 		"include": ["reasoning.encrypted_content"],
 		"service_tier": "flex",
+		"prompt_cache_key": "5871e58410cf47e6c2bdc08398e57831",
 		"max_output_tokens": 100,
 		"reasoning": {"effort": "low"},
 		"tools": [{"type": "function", "strict": false, "name": "get_weather", "description": "get weather", "parameters": {"type": "object", "additionalProperties": false}}],
@@ -117,6 +118,100 @@ func TestToOpenAIResponsesJSON(t *testing.T) {
 	chatb, _ := ToOpenAICompletionJSON(input)
 	if strings.Contains(string(chatb), outputItemsField) {
 		t.Errorf("chat completion request should not contain %s: %s", outputItemsField, chatb)
+	}
+}
+
+func TestLunaPromptCacheKey(t *testing.T) {
+	// without a client key, the key is derived from the instruct, no breakpoint is placed
+	messages := []*header.LLMChatHistoryEntry{{Role: "user", Content: "document"}, {Role: "user", Content: "question"}}
+	b, _ := ToOpenAIResponsesJSON(CompletionInput{Model: Gpt_6_luna, Instruct: "be nice", Messages: messages})
+	actual := map[string]any{}
+	json.Unmarshal(b, &actual)
+	if actual["prompt_cache_key"] != GetMD5Hash("gpt-6-luna.be nice") || strings.Contains(string(b), "breakpoint") {
+		t.Errorf("unexpected request %s", b)
+	}
+
+	b, _ = ToOpenAIResponsesJSON(CompletionInput{Model: Gpt_6_luna, PromptCacheKey: "k", Messages: messages})
+	actual = map[string]any{}
+	json.Unmarshal(b, &actual)
+	if actual["prompt_cache_key"] != "k" {
+		t.Errorf("unexpected request %s", b)
+	}
+
+	// older models keep their automatic caching
+	b, _ = ToOpenAIResponsesJSON(CompletionInput{
+		Model:           "gpt-5.4-mini",
+		ReasoningEffort: "low",
+		Tools:           []OpenAITool{{Type: "function", Function: &Function{Name: "f"}}},
+		Messages:        messages,
+	})
+	if strings.Contains(string(b), "prompt_cache_key") {
+		t.Errorf("unexpected gpt-5.4-mini request %s", b)
+	}
+}
+
+func TestLunaClientCacheBreakpoint(t *testing.T) {
+	// breakpoints are copied on input text blocks only
+	messages := []*header.LLMChatHistoryEntry{
+		{Role: "user", Content: "instructions", CacheBreakpoint: true},
+		{Role: "user", Contents: []*header.OpenAIMessageContent{
+			{Type: "text", Text: "doc1", PromptCacheBreakpoint: &header.OpenAIMessageContentPromptCacheBreakpoint{Ttl: "12h"}},
+			{Type: "text", Text: "doc2"},
+		}},
+		{Role: "assistant", Content: "ok", CacheBreakpoint: true},
+		{Role: "user", Content: "question"},
+	}
+	b, _ := ToOpenAIResponsesJSON(CompletionInput{Model: Gpt_6_luna, PromptCacheKey: "k", Messages: messages})
+	actual := map[string]any{}
+	json.Unmarshal(b, &actual)
+	expected := []any{}
+	json.Unmarshal([]byte(`[
+		{"role": "user", "content": [{"type": "input_text", "text": "instructions", "prompt_cache_breakpoint": {"mode": "explicit"}}]},
+		{"role": "user", "content": [
+			{"type": "input_text", "text": "doc1", "prompt_cache_breakpoint": {"mode": "explicit", "ttl": "12h"}},
+			{"type": "input_text", "text": "doc2"}
+		]},
+		{"role": "assistant", "content": "ok"},
+		{"role": "user", "content": "question"}
+	]`), &expected)
+	if !cmp.Equal(expected, actual["input"]) {
+		t.Errorf("Responses input mismatch (-want +got):\n%s", cmp.Diff(expected, actual["input"]))
+	}
+
+	// cache_breakpoint marks the last text block of a multi part message
+	b, _ = ToOpenAIResponsesJSON(CompletionInput{Model: Gpt_6_luna, Messages: []*header.LLMChatHistoryEntry{
+		{Role: "user", CacheBreakpoint: true, Contents: []*header.OpenAIMessageContent{
+			{Type: "text", Text: "doc1"},
+			{Type: "text", Text: "doc2"},
+			{Type: "image_url", ImageUrl: &header.OpenAIMessageContentImageUrl{Url: "https://img/a.png"}},
+		}},
+		{Role: "user", Content: "question"},
+	}})
+	actual = map[string]any{}
+	json.Unmarshal(b, &actual)
+	expected = []any{}
+	json.Unmarshal([]byte(`[
+		{"role": "user", "content": [
+			{"type": "input_text", "text": "doc1"},
+			{"type": "input_text", "text": "doc2", "prompt_cache_breakpoint": {"mode": "explicit"}},
+			{"type": "input_image", "image_url": "https://img/a.png"}
+		]},
+		{"role": "user", "content": "question"}
+	]`), &expected)
+	if !cmp.Equal(expected, actual["input"]) {
+		t.Errorf("Responses input mismatch (-want +got):\n%s", cmp.Diff(expected, actual["input"]))
+	}
+
+	// older models and chat completions never receive breakpoints
+	input := CompletionInput{Model: "gpt-5.4-mini", ReasoningEffort: "low", Tools: []OpenAITool{{Type: "function", Function: &Function{Name: "f"}}}, Messages: messages}
+	b, _ = ToOpenAIResponsesJSON(input)
+	if strings.Contains(string(b), "breakpoint") {
+		t.Errorf("unexpected gpt-5.4-mini request %s", b)
+	}
+	input.Model = "gpt-4.1-mini"
+	b, _ = ToOpenAICompletionJSON(input)
+	if strings.Contains(string(b), "breakpoint") {
+		t.Errorf("unexpected chat completion request %s", b)
 	}
 }
 

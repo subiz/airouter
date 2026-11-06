@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/subiz/executor/v2"
 	"github.com/subiz/header"
@@ -681,6 +682,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 			os.WriteFile(cachepath, output, 0644)
 		}
 
+		sanitizeCompletion(completion)
 		if len(completion.Choices) == 0 {
 			break
 		}
@@ -912,6 +914,45 @@ func sendPOST(ctx context.Context, url, token string, payload []byte) (*http.Res
 func GetMD5Hash(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
+}
+
+// ValidText drops invalid UTF-8 and control characters other than tab, newline
+// and carriage return. Models sometimes emit a control character in place of a
+// letter (e.g. U+0014 for "Ấ"), which breaks JSON parsing of structured output.
+func ValidText(str string) string {
+	str = strings.ToValidUTF8(str, "")
+	if strings.IndexFunc(str, isBadRune) < 0 {
+		return str
+	}
+	return strings.Map(func(r rune) rune {
+		if isBadRune(r) {
+			return -1
+		}
+		return r
+	}, str)
+}
+
+func isBadRune(r rune) bool {
+	return unicode.IsControl(r) && r != '\t' && r != '\n' && r != '\r'
+}
+
+// sanitizeCompletion makes every text the model returned valid unicode, for
+// fresh and cached responses alike.
+func sanitizeCompletion(completion *OpenAIChatResponse) {
+	for i := range completion.Choices {
+		msg := &completion.Choices[i].Message
+		if msg.Content != nil {
+			content := ValidText(*msg.Content)
+			msg.Content = &content
+		}
+		msg.Refusal = ValidText(msg.Refusal)
+		for j := range msg.Contents {
+			msg.Contents[j].Text = ValidText(msg.Contents[j].Text)
+		}
+		for j := range msg.ToolCalls {
+			msg.ToolCalls[j].Function.Arguments = ValidText(msg.ToolCalls[j].Function.Arguments)
+		}
+	}
 }
 
 // badstring: UGjhuqduIGjGsOG7m25nIGThuqtuIGPDoGkgxJHhurd0IHThu7EgxJHhu5luZyBn4butaSBaTlMgdHLDqm4gU3ViaXouCiAzOkNo4buNbiBt4bqrdSB0aW4gWk5TW+KAi10oI2IlQzYlQjAlRTElQkIlOUJjLTMlRTElQkIlOERuLW0lRTElQkElQUJ1LXRpbi16bnMgIsSQxrDhu51uZyBk4bqrbiB0cuG7sWMgdGnhur9wIMSR4bq/biBixrDhu5tjLTPhu41uLW3huqt1LXRpbi16bnMiKQohW10oaHR0cHM6Ly92Y2RuLnN1Yml6LWNkbi5jb20vZmlsZS83ZjczNDllNWNjYTNmNzczYTlkODIwODIxZTg3ZmI1NTEwYzlhODgwNDc0MGQ0ZjMzOWY3YzlkMzdiN2IzNmZiX2FjcHhrZ3VtaWZ1b29mb29zYmxlKQojIyMgQsaw4bubYyA0OiBI4bq5biBs4buLY2ggZ+G7rWkgdOG7sSDEkeG7mW5nIFpOU1vigItdKCNiJUM2JUIwJUUxJUJCJTlCYy00LWglRTElQkElQjluLWwlRTElQkIlOEJjaC1nJUUxJUJCJUFEaS10JUUxJUJCJUIxLSVDNCU5MSVFMSVCQiU5OW5nLXpucyAixJDGsOG7nW5nIGThuqtuIHRy4buxYyB0aQDhur9w
