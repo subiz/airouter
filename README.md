@@ -165,6 +165,18 @@ Rules:
 
 Gemma 4 aliases `gemma-4-31b` and `gemma-4-26b-a4b` are normalized to the Gemini API model IDs `gemma-4-31b-it` and `gemma-4-26b-a4b-it`. Both Gemma 4 models have a 256K token context length.
 
+The server transparently replaces the OpenAI models retiring on December 11, 2026:
+
+| Client model (including its dated snapshot) | Upstream model |
+|---|---|
+| `gpt-5-mini`, `gpt-5-nano` | `gpt-6-luna` |
+| `gpt-5`, `o3` | `gpt-5.6-sol` |
+| `gpt-5-pro`, `o3-pro` | `gpt-5.6-sol` with `reasoning.mode: pro` |
+
+Clients keep sending the old names. `ChatCompleteAPI` returns the requested alias and the existing chat completion format, while billing uses the upstream model's rates and reported usage. These requests use the Responses API internally, including encrypted reasoning for tool continuations and the existing cache breakpoint support. Legacy `minimal` reasoning maps to `low`; other effort values are preserved. Historical `CalculateCost` calls with old model names retain their old rates.
+
+Replacement guidance: [OpenAI deprecations](https://developers.openai.com/api/docs/deprecations). GPT-5.6 Sol pricing currently uses its [promotional rates through November 30, 2026](https://developers.openai.com/api/docs/models/gpt-5.6-sol); review those rates when the promotion expires.
+
 ### Text Embedding
 
 - `gemini-embedding-001`

@@ -14,11 +14,11 @@ import (
 const outputItemsField = "openai_response_output_items"
 
 // useOpenAIResponsesAPI reports whether the request must be sent to /v1/responses instead of
-// /v1/chat/completions. gpt-6-luna always uses the Responses API, gpt-5.4 models
+// /v1/chat/completions. gpt-6-luna and gpt-5.6-sol always use the Responses API, gpt-5.4 models
 // don't support function tools with reasoning_effort in /v1/chat/completions
 func useOpenAIResponsesAPI(req CompletionInput) bool {
 	model := ToOpenAIModel(req.Model)
-	if model == Gpt_6_luna {
+	if usesOpenAICacheOptions(model) {
 		return true
 	}
 
@@ -33,9 +33,14 @@ func useOpenAIResponsesAPI(req CompletionInput) bool {
 	return model == Gpt_5_4_mini || model == Gpt_5_4_nano
 }
 
+func usesOpenAICacheOptions(model string) bool {
+	return model == Gpt_6_luna || model == Gpt_5_6_sol
+}
+
 // ToOpenAIResponsesJSON converts a CompletionInput to an OpenAI /v1/responses request
 func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 	model := ToOpenAIModel(req.Model)
+	modernCache := usesOpenAICacheOptions(model)
 	out := map[string]any{
 		"model":   model,
 		"store":   false,
@@ -44,12 +49,12 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 
 	// gpt-5.6+ models replace prompt_cache_retention with prompt_cache_options, we keep their default
 	// 30m ttl since 12h cache writes cost 2.5x the input price (vs 1.25x for 30m)
-	if model != Gpt_6_luna {
+	if !modernCache {
 		out["prompt_cache_retention"] = "24h"
 	}
 	if req.PromptCacheKey != "" {
 		out["prompt_cache_key"] = req.PromptCacheKey
-	} else if model == Gpt_6_luna {
+	} else if modernCache {
 		// gpt-5.6+ models only match caches reliably with a prompt_cache_key
 		out["prompt_cache_key"] = GetMD5Hash(model + "." + req.Instruct)
 	}
@@ -65,8 +70,22 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 
 	// stop and seed are not supported by the Responses API
 	effort := resolveEffort(req)
+	reasoning := map[string]any{}
+	if replacement, pro := retiredOpenAIModel(req.Model); replacement != "" {
+		// Earlier models used current-turn reasoning. Preserve that behavior during migration.
+		reasoning["context"] = "current_turn"
+		if effort == "minimal" {
+			effort = "low"
+		}
+		if pro {
+			reasoning["mode"] = "pro"
+		}
+	}
 	if effort != "" {
-		out["reasoning"] = map[string]any{"effort": effort}
+		reasoning["effort"] = effort
+	}
+	if len(reasoning) > 0 {
+		out["reasoning"] = reasoning
 	}
 
 	// sampling params are only supported without reasoning
@@ -140,7 +159,7 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 			}
 		}
 
-		if content := toResponsesContent(role, msg, model == Gpt_6_luna); content != nil {
+		if content := toResponsesContent(role, msg, modernCache); content != nil {
 			input = append(input, map[string]any{"role": role, "content": content})
 		}
 

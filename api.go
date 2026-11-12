@@ -315,6 +315,7 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 	} else {
 		apikey := _openaiapikey
 		output, err = chatCompleteChatGPT(ctx, apikey, request)
+		model = ToOpenAIModel(model) // bill the model actually sent upstream
 	}
 
 	if len(output) == 0 && err != nil {
@@ -333,6 +334,9 @@ func ChatCompleteAPI(ctx context.Context, payload []byte) (OpenAIChatResponse, e
 			tier = request.ServiceTier
 		}
 		response.Usage.KFpvCostUSD = CalculateCost(model, response.Usage, tier)
+	}
+	if replacement, _ := retiredOpenAIModel(request.Model); replacement != "" && response.Model != "" {
+		response.Model = request.Model // preserve the client's model alias in our API response
 	}
 	return response, err
 }
@@ -421,6 +425,9 @@ func postOpenAI(ctx context.Context, url, apikey string, payload []byte, api str
 
 func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	req.PromptCacheRetention = "24h"
+	if usesOpenAICacheOptions(ToOpenAIModel(req.Model)) {
+		req.PromptCacheRetention = ""
+	}
 	b, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -919,13 +926,6 @@ func trimGeminiContentText(content *GeminiContent, overflowTokens int) {
 }
 
 func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionInput) ([]byte, error) {
-	model := request.Model
-	if strings.HasPrefix(model, "gpt-5-") {
-		// those models only support temperatture parameters = 1
-		// https://community.openai.com/t/temperature-in-gpt-5-models/1337133/4
-		request.Temperature = 1
-	}
-
 	if request.ServiceTier == "flex" {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, 15*time.Minute)
@@ -934,6 +934,10 @@ func chatCompleteChatGPT(ctx context.Context, apikey string, request CompletionI
 
 	if useOpenAIResponsesAPI(request) {
 		return chatCompleteOpenAIResponses(ctx, apikey, request)
+	}
+	if strings.HasPrefix(request.Model, "gpt-5-") {
+		// Preserve the legacy Chat Completions temperature restriction.
+		request.Temperature = 1
 	}
 
 	var err error

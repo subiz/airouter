@@ -37,6 +37,7 @@ const Gpt_4_1_nano = "gpt-4.1-nano"
 const Gpt_4_1 = "gpt-4.1"
 const Gpt_5_4_nano = "gpt-5.4-nano"
 const Gpt_5_4_mini = "gpt-5.4-mini"
+const Gpt_5_6_sol = "gpt-5.6-sol"
 const Gpt_6_luna = "gpt-6-luna"
 const O3 = "o3"
 const O4_mini = "o4-mini"
@@ -104,6 +105,9 @@ func ToModel(model string) string {
 
 	if model == "gpt-6-luna" || strings.HasPrefix(model, "gpt-6-luna-2") {
 		return Gpt_6_luna
+	}
+	if model == Gpt_5_6_sol || strings.HasPrefix(model, "gpt-5.6-sol-2") {
+		return Gpt_5_6_sol
 	}
 
 	if model == O3 || strings.HasPrefix(model, "o3-2") {
@@ -190,8 +194,25 @@ func ToGeminiModel(model string) string {
 	return model
 }
 
-// ToOpenAIModel converts a model name to its equivalent OpenAI model.
+// retiredOpenAIModel resolves the six models retiring on December 11, 2026.
+// Keep these aliases at the provider boundary so clients and historical prices stay unchanged.
+func retiredOpenAIModel(model string) (replacement string, pro bool) {
+	switch model {
+	case "gpt-5-mini", "gpt-5-mini-2025-08-07", "gpt-5-nano", "gpt-5-nano-2025-08-07":
+		return Gpt_6_luna, false
+	case "gpt-5", "gpt-5-2025-08-07", "o3", "o3-2025-04-16":
+		return Gpt_5_6_sol, false
+	case "gpt-5-pro", "gpt-5-pro-2025-10-06", "o3-pro", "o3-pro-2025-06-10":
+		return Gpt_5_6_sol, true
+	}
+	return "", false
+}
+
+// ToOpenAIModel converts a model name to its active equivalent OpenAI model.
 func ToOpenAIModel(model string) string {
+	if replacement, _ := retiredOpenAIModel(model); replacement != "" {
+		return replacement
+	}
 	model = ToModel(model)
 
 	if strings.HasPrefix(model, "gpt") {
@@ -199,7 +220,7 @@ func ToOpenAIModel(model string) string {
 	}
 
 	if model == Gemini_2_5_flash_lite {
-		return Gpt_5_nano
+		return Gpt_6_luna
 	}
 
 	if model == Gemini_3_1_flash_lite {
@@ -243,21 +264,27 @@ const llmlongcontextthreshold = 272_000
 
 // per 1M tokens
 var llmmodellonginputprice = map[string]float64{
-	"gpt-6-luna": 0.2,
+	"gpt-5.6-sol": 8,
+	"gpt-6-luna":  0.2,
 }
 
 // per 1M tokens
 var llmmodellongoutputprice = map[string]float64{
-	"gpt-6-luna": 0.75,
+	"gpt-5.6-sol": 30,
+	"gpt-6-luna":  0.75,
 }
 
 // per 1M tokens
 var llmmodellongcachedprice = map[string]float64{
-	"gpt-6-luna": 0.02,
+	"gpt-5.6-sol": 0.8,
+	"gpt-6-luna":  0.02,
 }
 
 // per 1M tokens
 var llmmodelinputprice = map[string]float64{
+	// GPT-5.6 Sol promotional rates through November 30, 2026; review at expiry.
+	// https://developers.openai.com/api/docs/models/gpt-5.6-sol
+	"gpt-5.6-sol":  4,
 	"gpt-4.1":      2,
 	"gpt-4.1-mini": 0.4,
 	"gpt-4.1-nano": 0.1,
@@ -284,6 +311,7 @@ var llmmodelinputprice = map[string]float64{
 
 // per 1M tokens
 var llmmodeloutputprice = map[string]float64{
+	"gpt-5.6-sol":  20,
 	"gpt-4.1":      8,
 	"gpt-4.1-mini": 1.6,
 	"gpt-4.1-nano": 0.4,
@@ -309,6 +337,7 @@ var llmmodeloutputprice = map[string]float64{
 
 // per 1M tokens
 var llmmodelcachedprice = map[string]float64{
+	"gpt-5.6-sol":  0.4,
 	"gpt-4.1":      0.5,
 	"gpt-4.1-mini": 0.1,
 	"gpt-4.1-nano": 0.025,

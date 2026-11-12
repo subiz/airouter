@@ -27,7 +27,7 @@ func TestUseOpenAIResponsesAPI(t *testing.T) {
 		{CompletionInput{Model: "gpt-5.4-mini", Tools: tools, ReasoningEffort: "none"}, false},
 		{CompletionInput{Model: "gpt-5.4-nano", Tools: tools}, false},
 		{CompletionInput{Model: "gpt-5.4-mini", ReasoningEffort: "low"}, false},
-		{CompletionInput{Model: "gpt-5", Tools: tools, ReasoningEffort: "low"}, false},
+		{CompletionInput{Model: "gpt-5", Tools: tools, ReasoningEffort: "low"}, true},
 	}
 	for i, c := range cases {
 		if got := useOpenAIResponsesAPI(c.input); got != c.want {

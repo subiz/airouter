@@ -150,7 +150,7 @@ func TestModelAliases(t *testing.T) {
 // every standardized chat model must have a price, or it would be billed 0
 func TestChatModelPrices(t *testing.T) {
 	models := []string{Gpt_4o_mini, Gpt_4o, Gpt_4_1_mini, Gpt_5_mini, Gpt_5_nano, Gpt_5, Gpt_4_1_nano, Gpt_4_1,
-		Gpt_5_4_nano, Gpt_5_4_mini, Gpt_6_luna, O3, O4_mini, Gemini_2_5_pro, Gemini_2_5_flash, Gemini_2_5_flash_lite,
+		Gpt_5_4_nano, Gpt_5_4_mini, Gpt_5_6_sol, Gpt_6_luna, O3, O4_mini, Gemini_2_5_pro, Gemini_2_5_flash, Gemini_2_5_flash_lite,
 		Gemini_3_1_flash_lite, Gemma_4_31b_it, Gemma_4_26b_a4b_it}
 	for _, model := range models {
 		if ToModel(model) != model {
