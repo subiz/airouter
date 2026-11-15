@@ -7,7 +7,7 @@ This project is a lightweight Go client for the Subiz AI Proxy, providing a unif
 - **Purpose**: Abstract various LLM APIs into a single, provider-agnostic Go interface.
 - **Main Technologies**: Go (1.26.1+), Subiz AI Proxy, Protobuf, JSON.
 - **Backend**: Communicates with `https://api.subiz.com.vn/4.1/ai` (configurable via `BACKEND` variable).
-- **Core Features**: Chat Completion, Text Embedding, and Reranking.
+- **Core Features**: Chat Completion and Text Embedding.
 
 ## Architecture & Logic
 
@@ -19,7 +19,7 @@ This project is a lightweight Go client for the Subiz AI Proxy, providing a unif
 
 ## Key Files
 
-- `airouter.go`: Main entry point containing core client logic, model constants, and implementation of `Complete`, `GetEmbedding`, and `Rerank`.
+- `airouter.go`: Main entry point containing core client logic, model constants, and implementation of `Complete` and `GetEmbedding`.
 - `api.go`: Defines the data structures (structs) for requests and responses, including provider-specific types for OpenAI and Gemini.
 - `airouter_test.go`: Contains the test suite, heavily utilizing data-driven tests.
 - `testcases/`: A directory containing JSON files used for regression testing of request/response conversions.

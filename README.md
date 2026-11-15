@@ -8,11 +8,11 @@ AI Router is a lightweight Go client for the Subiz AI Proxy, providing a unified
 
 ## Features
 
-- **Unified API**: Single interface for Chat Completion, Text Embedding, and Reranking across different providers.
+- **Unified API**: Single interface for Chat Completion and Text Embedding across different providers.
 - **Provider Agnostic**: Switch between GPT-4, GPT-5, Gemini, and other models without changing your core logic.
 - **Simplified Configuration**: Easy initialization with a Subiz API key.
 
-Client requests from `Complete`, `GetEmbedding`, and `Rerank` include a URL-encoded `x-client-stack` query parameter containing `log.Stack()`. The server can read it with `r.URL.Query().Get("x-client-stack")` to identify the caller's file and line. Completion tool rounds reuse the original stack, including when `NoLog` is enabled. Local cache hits do not send a request.
+Client requests from `Complete` and `GetEmbedding` include a URL-encoded `x-client-stack` query parameter containing `log.Stack()`. The server can read it with `r.URL.Query().Get("x-client-stack")` to identify the caller's file and line. Completion tool rounds reuse the original stack, including when `NoLog` is enabled. Local cache hits do not send a request.
 
 ## Installation
 
@@ -90,34 +90,6 @@ func main() {
 }
 ```
 
-#### 3. Rerank
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "github.com/subiz/airouter"
-)
-
-func main() {
-    airouter.Init("YOUR_SUBIZ_API_KEY")
-
-    records := []*airouter.RerankRecord{
-        {Id: "1", Title: "Greeting", Content: "Xin chào thế giới"},
-        {Id: "2", Title: "Farewell", Content: "Goodbye world"},
-    }
-
-    output, err := airouter.Rerank(context.Background(), "google", "hello", records)
-    if err != nil {
-        panic(err)
-    }
-
-    fmt.Println("Rerank results:", output)
-}
-```
-
 ### Prompt Caching for `gpt-6-luna`
 
 `gpt-6-luna` (like other gpt-5.6+ models) caches the prompt only at **breakpoints**, not at any shared prefix. A request reads the cache only when everything up to one of its breakpoints is byte-identical to an earlier request, so changing a single character before the breakpoint misses it.
@@ -185,10 +157,6 @@ Replacement guidance: [OpenAI deprecations](https://developers.openai.com/api/do
 - `text-embedding-3-small`
 - `text-embedding-3-large`
 - `text-embedding-ada-002`
-
-### Reranking
-
-- `google` (Powered by Google Vertex AI)
 
 ## License
 

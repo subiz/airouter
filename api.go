@@ -9,7 +9,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -183,18 +182,6 @@ type GeminiEmbeddingRequest struct {
 	Content GeminiEmbeddingContent `json:"content"`
 }
 
-type GeminiRerankRecord struct {
-	Id      string  `json:"id,omitempty"`
-	Title   string  `json:"title,omitempty"`
-	Content string  `json:"content,omitempty"`
-	Score   float32 `json:"score,omitempty"`
-}
-
-type GeminiRankingResponse struct {
-	Records []*GeminiRerankRecord `json:"records,omitempty"`
-	Error   *GeminiError          `json:"error"`
-}
-
 // GeminiErrorDetail represents the details of a Gemini API error.
 type GeminiErrorDetail struct {
 	Type            string `json:"@type"`
@@ -280,16 +267,6 @@ func FakeBackend(rawURL string, input []byte) (int, []byte) {
 		out, err := ChatCompleteAPI(context.Background(), input)
 		if err != nil {
 			return 500, nil
-		}
-		b, _ := json.Marshal(out)
-		return 200, b
-	}
-
-	if parsedURL.Host == "test" && parsedURL.Path == "/rerankings" {
-		token := os.Getenv("GEMINI_RERANK_TOKEN")                 // export GEMINI_RERANK_TOKEN=`gcloud auth print-access-token`
-		out, err := RerankAPI(context.Background(), token, input) // token will be from env
-		if err != nil {
-			return 500, []byte(err.Error())
 		}
 		b, _ := json.Marshal(out)
 		return 200, b
@@ -1023,113 +1000,6 @@ func getGeminiEmbedding(ctx context.Context, apiKey, model, text string) (OpenAI
 
 	out.Data[0].Embedding = values
 	return out, nil
-}
-
-func RerankAPI(ctx context.Context, token string, payload []byte) (RerankingResponse, error) {
-	request := RerankInput{}
-	json.Unmarshal(payload, &request)
-	model := request.Model
-	if model == "" {
-		model = "semantic-ranker-default@latest"
-	}
-	out, err := rerankingGemini(ctx, token, request)
-	if out == nil && err != nil {
-		return RerankingResponse{
-			Error: &OpenAIError{Message: err.Error(), Type: "internal_error"},
-		}, err
-	}
-	return *out, nil
-}
-
-func rerankingGemini(ctx context.Context, token string, request RerankInput) (*RerankingResponse, error) {
-	records := request.Records
-	query := header.Norm(request.Query, 1000)
-
-	if len(query) == 0 || len(records) == 0 {
-		return &RerankingResponse{
-			Created: time.Now().UnixMilli(),
-			Object:  "reranking",
-			Model:   request.Model,
-		}, nil
-	}
-
-	topn := request.TopN
-	if topn <= 0 {
-		topn = len(request.Records)
-	}
-
-	model := request.Model
-	var err error
-	requestb, err := json.Marshal(map[string]any{
-		"model":                         model,
-		"query":                         query,
-		"records":                       records,
-		"ignoreRecordDetailsInResponse": true,
-		"topN":                          topn,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	url := "https://discoveryengine.googleapis.com/v1/projects/subiz-version-4/locations/global/rankingConfigs/default_ranking_config:rank"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestb))
-	if err != nil {
-		return nil, log.EServer(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	output := buf.Bytes()
-	gemres := &GeminiRankingResponse{}
-	json.Unmarshal(output, gemres)
-
-	return toOpenAIRerankResponse(gemres, model)
-}
-
-// toOpenAIChatResponse converts a Gemini response to an OpenAI-compatible chat response.
-func toOpenAIRerankResponse(res *GeminiRankingResponse, model string) (*RerankingResponse, error) {
-	if res.Error != nil {
-		param := ""
-		if len(res.Error.Details) > 0 && len(res.Error.Details[0].FieldViolations) > 0 {
-			param = res.Error.Details[0].FieldViolations[0].Field
-		}
-		return &RerankingResponse{
-			Created: time.Now().UnixMilli(),
-			Model:   model,
-			Object:  "reranking",
-			Error: &OpenAIError{
-				Message: res.Error.Message,
-				Type:    "invalid_request_error",
-				Param:   param,
-			},
-		}, nil
-	}
-	if res == nil {
-		return nil, fmt.Errorf("empty response from Gemini")
-	}
-
-	records := []*RerankRecord{}
-	for _, record := range res.Records {
-		records = append(records, &RerankRecord{
-			Id:      record.Id,
-			Title:   record.Title,
-			Content: record.Content,
-			Score:   record.Score,
-		})
-	}
-	return &RerankingResponse{
-		Model:   model,
-		Created: time.Now().UnixMilli(),
-		Object:  "reranking",
-		Records: records,
-	}, nil
 }
 
 func chatCompleteGemini(ctx context.Context, apikey string, request CompletionInput) ([]byte, error) {
