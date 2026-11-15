@@ -393,15 +393,8 @@ func TestChatCompletionFull(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			accid := "acpxkgumifuoofoosble"
-			b, _ := json.Marshal(tc.Input.ResponseFormat)
-			var resf *header.LLMResponseJSONSchemaFormat
-			if len(b) > 0 && string(b) != "null" {
-				resf = &header.LLMResponseJSONSchemaFormat{}
-				json.Unmarshal(b, resf)
-			}
-
 			history := []*header.LLMChatHistoryEntry{}
-			b, _ = json.Marshal(tc.Input.Messages[1:])
+			b, _ := json.Marshal(tc.Input.Messages[1:])
 			json.Unmarshal(b, &history)
 
 			for _, fn := range tc.Input.Tools {

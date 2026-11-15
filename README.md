@@ -12,6 +12,8 @@ AI Router is a lightweight Go client for the Subiz AI Proxy, providing a unified
 - **Provider Agnostic**: Switch between GPT-4, GPT-5, Gemini, and other models without changing your core logic.
 - **Simplified Configuration**: Easy initialization with a Subiz API key.
 
+Client requests from `Complete`, `GetEmbedding`, and `Rerank` include a URL-encoded `x-client-stack` query parameter containing `log.Stack()`. The server can read it with `r.URL.Query().Get("x-client-stack")` to identify the caller's file and line. Completion tool rounds reuse the original stack, including when `NoLog` is enabled. Local cache hits do not send a request.
+
 ## Installation
 
 ```bash

@@ -376,13 +376,10 @@ func toOpenAIToolParameters(schema *header.JSONSchema) map[string]any {
 	return params
 }
 
-// toOpenAIJSONSchemaFormat returns the name, strict and schema of the requested JSON schema output, json_schema
-// takes precedence over the deprecated response_format. Returns nil if there is none
+// toOpenAIJSONSchemaFormat returns the name, strict and schema of the requested JSON schema output.
+// Returns nil if there is none.
 func toOpenAIJSONSchemaFormat(req CompletionInput) map[string]any {
 	js := req.JSONSchema
-	if js == nil && req.ResponseFormat != nil {
-		js = req.ResponseFormat.JSONSchema
-	}
 	if js == nil {
 		return nil
 	}
@@ -476,7 +473,6 @@ func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
 	}
 
 	if format := toOpenAIJSONSchemaFormat(req); format != nil {
-		delete(m, "response_format")
 		delete(m, "json_schema")
 		changed = true
 		m["response_format"] = map[string]any{"type": "json_schema", "json_schema": format}
@@ -662,14 +658,9 @@ func ToGeminiRequestJSON(req CompletionInput) ([]byte, error) {
 		}
 	}
 
-	if req.ResponseFormat != nil && req.ResponseFormat.JSONSchema != nil {
-		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
-		// The JSON Schema path preserves empty enum values, which responseSchema rejects.
-		geminiReq.GenerationConfig.ResponseJSONSchema = toGeminiSchema(req.ResponseFormat.JSONSchema.Schema)
-	}
-
 	if req.JSONSchema != nil {
 		geminiReq.GenerationConfig.ResponseMIMEType = "application/json"
+		// The JSON Schema path preserves empty enum values, which responseSchema rejects.
 		geminiReq.GenerationConfig.ResponseJSONSchema = toGeminiSchema(req.JSONSchema.Schema)
 	}
 

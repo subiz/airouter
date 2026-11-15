@@ -992,7 +992,7 @@
       "model": "models/gemini-3.1-flash-lite"
     }
   },
-  "with_response_format_1": {
+  "with_json_schema_1": {
     "api": {
       "messages": [
         {
@@ -1004,31 +1004,28 @@
       "seed": 0,
       "temperature": 0,
       "top_p": 1,
-      "response_format": {
-        "type": "json_schema",
-        "json_schema": {
-          "name": "intent",
-          "strict": true,
-          "schema": {
-            "additionalProperties": false,
-            "properties": {
-              "recipeName": {
-                "type": "string",
-                "description": "Name of the recipe"
-              },
-              "ingredients": {
-                "additionalProperties": false,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "description": "Ingredient description"
-                },
-                "description": "List of ingredients"
-              }
+      "json_schema": {
+        "name": "intent",
+        "strict": true,
+        "schema": {
+          "additionalProperties": false,
+          "properties": {
+            "recipeName": {
+              "type": "string",
+              "description": "Name of the recipe"
             },
-            "required": ["recipeName", "ingredients"],
-            "type": "object"
-          }
+            "ingredients": {
+              "additionalProperties": false,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Ingredient description"
+              },
+              "description": "List of ingredients"
+            }
+          },
+          "required": ["recipeName", "ingredients"],
+          "type": "object"
         }
       }
     },
@@ -1109,7 +1106,7 @@
       "model": "models/gemini-3.1-flash-lite"
     }
   },
-  "with_response_format_2": {
+  "with_json_schema_2": {
     "api": {
       "messages": [
         {
@@ -1488,59 +1485,56 @@
       "temperature": 0,
       "top_p": 1,
       "tools": null,
-      "response_format": {
-        "type": "json_schema",
-        "json_schema": {
-          "name": "answer_plan",
-          "strict": true,
-          "schema": {
-            "type": "object",
-            "properties": {
-              "steps": {
-                "type": "array",
-                "description": "action should be taken to answer the user query",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "action": {
-                      "type": "string",
-                      "description": "name of the action. Eg: 'greet', 'say-thanks'",
+      "json_schema": {
+        "name": "answer_plan",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "steps": {
+              "type": "array",
+              "description": "action should be taken to answer the user query",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "name of the action. Eg: 'greet', 'say-thanks'",
+                    "additionalProperties": false
+                  },
+                  "parameters": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "additionalProperties": false
+                        },
+                        "value": {
+                          "type": "string",
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["name", "value"],
                       "additionalProperties": false
                     },
-                    "parameters": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
-                            "type": "string",
-                            "additionalProperties": false
-                          },
-                          "value": {
-                            "type": "string",
-                            "additionalProperties": false
-                          }
-                        },
-                        "required": ["name", "value"],
-                        "additionalProperties": false
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": ["action", "parameters"],
-                  "additionalProperties": false
+                    "additionalProperties": false
+                  }
                 },
+                "required": ["action", "parameters"],
                 "additionalProperties": false
               },
-              "strategy": {
-                "type": "string",
-                "description": "strategy",
-                "additionalProperties": false
-              }
+              "additionalProperties": false
             },
-            "required": ["strategy", "steps"],
-            "additionalProperties": false
-          }
+            "strategy": {
+              "type": "string",
+              "description": "strategy",
+              "additionalProperties": false
+            }
+          },
+          "required": ["strategy", "steps"],
+          "additionalProperties": false
         }
       }
     },

@@ -430,12 +430,6 @@ type Function struct {
 	Handler func(ctx context.Context, arg, callid string, ctxm map[string]any) string `json:"-"` // "", true -> abandon completion
 }
 
-// ResponseFormat specifies the format of the response.
-type ResponseFormat struct {
-	Type       string                              `json:"type,omitempty"`
-	JSONSchema *header.LLMResponseJSONSchemaFormat `json:"json_schema,omitempty"`
-}
-
 // OpenAIChoice mimics the structure of a choice in an OpenAI Chat Completion response.
 type OpenAIChoice struct {
 	Index        int               `json:"index"`
@@ -587,6 +581,7 @@ type CompletionReasoning struct {
 
 type CompletionInput struct {
 	Seed                 int                                 `json:"seed,omitempty"`
+	Name                 string                              `json:"name,omitempty"` // for logging only
 	PromptCacheKey       string                              `json:"prompt_cache_key,omitempty"`
 	PromptCacheRetention string                              `json:"prompt_cache_retention,omitempty"`
 	Verbosity            string                              `json:"verbosity,omitempty"`
@@ -596,7 +591,6 @@ type CompletionInput struct {
 	Instruct             string                              `json:"instruct,omitempty"`
 	Messages             []*header.LLMChatHistoryEntry       `json:"messages,omitempty"`
 	MaxCompletionTokens  int                                 `json:"max_completion_tokens,omitempty"`
-	ResponseFormat       *ResponseFormat                     `json:"response_format,omitempty"` // @deprecated, use json_schema
 	JSONSchema           *header.LLMResponseJSONSchemaFormat `json:"json_schema,omitempty"`
 	ToolChoice           string                              `json:"tool_choice,omitempty"`
 	Reasoning            *CompletionReasoning                `json:"reasoning,omitempty"`
@@ -613,6 +607,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		ctx = context.Background()
 	}
 
+	clientStack := log.Stack()
 	start := time.Now()
 	var fnM = map[string]*Function{}
 	for _, fn := range input.Tools {
@@ -650,6 +645,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 
 		// send to subiz server
 		q := neturl.Values{}
+		q.Set("x-client-stack", clientStack)
 		if accid != "" {
 			q.Set("account_id", accid)
 		}
@@ -659,9 +655,16 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		if val, _ := ctx.Value("trace_id").(string); val != "" {
 			q.Set("x-trace-id", val)
 		}
-		if val, _ := ctx.Value("purpose").(string); val != "" {
-			q.Set("x-purpose", val) //
+		purpose := input.Name
+		if purpose == "" {
+			if val, _ := ctx.Value("purpose").(string); val != "" {
+				purpose = val
+			}
 		}
+		if purpose != "" {
+			q.Set("x-purpose", purpose)
+		}
+
 		if val, _ := ctx.Value("is-ai-msg").(string); val != "" {
 			q.Set("is-ai-msg", val)
 		}
@@ -808,7 +811,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 	}
 
 	if !input.NoLog {
-		log.Info(accid, log.Stack(), "LLM", cachehit, totalCost, completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ", convoid, string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
+		log.Info(accid, clientStack, "LLM", cachehit, "[", completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ]", convoid, string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
 	}
 
 	return completionoutput.Content, completionoutput, nil
@@ -835,6 +838,7 @@ func GetEmbedding(ctx context.Context, accid, model string, text string) ([]floa
 
 	// send to subiz server
 	q := neturl.Values{}
+	q.Set("x-client-stack", log.Stack())
 	if accid != "" {
 		q.Set("account_id", accid)
 	}
@@ -1093,6 +1097,7 @@ func Rerank(ctx context.Context, model, query string, inrecords []*RerankRecord)
 
 	// send to subiz server
 	q := neturl.Values{}
+	q.Set("x-client-stack", log.Stack())
 	if accid != "" {
 		q.Set("account_id", accid)
 	}

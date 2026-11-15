@@ -105,8 +105,6 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 	if format := toOpenAIJSONSchemaFormat(req); format != nil {
 		format["type"] = "json_schema"
 		text["format"] = format
-	} else if req.ResponseFormat != nil && req.ResponseFormat.Type != "" {
-		text["format"] = map[string]any{"type": req.ResponseFormat.Type} // json_object, text
 	}
 	if len(text) > 0 {
 		out["text"] = text

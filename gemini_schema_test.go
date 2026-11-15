@@ -30,12 +30,8 @@ func TestGeminiResponseSchemaPreservesEnums(t *testing.T) {
 		},
 	}
 	for name, input := range map[string]CompletionInput{
-		"response_format": {Model: Gemini_2_5_flash_lite, ResponseFormat: &ResponseFormat{Type: "json_schema", JSONSchema: schema}},
-		"json_schema":     {Model: Gemini_2_5_flash, JSONSchema: schema},
-		"json_schema_overrides_response_format": {
-			Model: Gemini_2_5_flash, JSONSchema: schema,
-			ResponseFormat: &ResponseFormat{Type: "json_schema", JSONSchema: &header.LLMResponseJSONSchemaFormat{Schema: &header.JSONSchema{Type: "string"}}},
-		},
+		"flash_lite": {Model: Gemini_2_5_flash_lite, JSONSchema: schema},
+		"flash":      {Model: Gemini_2_5_flash, JSONSchema: schema},
 	} {
 		t.Run(name, func(t *testing.T) {
 			body, err := ToGeminiRequestJSON(input)
