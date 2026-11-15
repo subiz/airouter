@@ -580,6 +580,7 @@ type CompletionReasoning struct {
 }
 
 type CompletionInput struct {
+	MaxRequestBytes      int                                 `json:"-"`
 	Seed                 int                                 `json:"seed,omitempty"`
 	Name                 string                              `json:"name,omitempty"` // for logging only
 	PromptCacheKey       string                              `json:"prompt_cache_key,omitempty"`
@@ -673,7 +674,15 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		}
 
 		url := BACKEND + "/completions?" + q.Encode()
-		requestbody, _ = json.Marshal(input)
+		var marshalErr error
+		requestbody, marshalErr = json.Marshal(input)
+		if marshalErr != nil {
+			return "", CompletionOutput{}, log.EServer(marshalErr, log.M{"message": "encode completion request", "account_id": accid})
+		}
+		if input.MaxRequestBytes > 0 && len(requestbody) > input.MaxRequestBytes {
+			return "", CompletionOutput{}, log.EServer(nil, log.M{"message": "LLM request exceeds byte budget; request was not sent", "bytes": len(requestbody), "limit": input.MaxRequestBytes, "account_id": accid})
+		}
+
 		md5sum := GetMD5Hash(accid + "." + string(requestbody))
 		cachepath := "./.cache/cc-" + md5sum
 		cache, err := os.ReadFile(cachepath)
