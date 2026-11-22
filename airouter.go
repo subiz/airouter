@@ -603,6 +603,13 @@ type CompletionInput struct {
 	StopAfterToolCalled  bool                                `json:"stop_after_tool_called"`
 }
 
+func backendHTTPError(action string, statusCode int, body []byte) error {
+	if err := log.UnmarshalHTTPError(body); err != nil {
+		return err
+	}
+	return log.EProvider(nil, "openai", action, log.M{"status": statusCode, "_payload": body})
+}
+
 func Complete(ctx context.Context, accid string, input CompletionInput) (string, CompletionOutput, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -712,7 +719,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
 			}
 			if resp.StatusCode != 200 {
-				return "", CompletionOutput{}, log.EProvider(nil, "openai", "completion", log.M{"status": resp.StatusCode, "_payload": output})
+				return "", CompletionOutput{}, backendHTTPError("completion", resp.StatusCode, output)
 			}
 
 			pricestr := resp.Header.Get("X-Cost-USD")
@@ -896,7 +903,7 @@ func GetEmbedding(ctx context.Context, accid, model string, text string) ([]floa
 		return nil, EmbeddingOutput{}, log.EProvider(err, "openai", "embedding")
 	}
 	if resp.StatusCode != 200 {
-		return nil, EmbeddingOutput{}, log.EProvider(nil, "openai", "embedding", log.M{"status": resp.StatusCode, "_payload": resoutput})
+		return nil, EmbeddingOutput{}, backendHTTPError("embedding", resp.StatusCode, resoutput)
 	}
 
 	json.Unmarshal(resoutput, response)
