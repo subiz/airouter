@@ -542,3 +542,39 @@ func TestMigratedOpenAIError(t *testing.T) {
 		t.Fatalf("upstream error was lost or billed: response=%+v, err=%v", out, err)
 	}
 }
+
+func TestProviderPromptUsageExcludesReplays(t *testing.T) {
+	t.Chdir(t.TempDir())
+	oldClient, oldBackend := http.DefaultClient, BACKEND
+	t.Cleanup(func() { http.DefaultClient, BACKEND = oldClient, oldBackend })
+	BACKEND = "https://gateway.example"
+	requests := 0
+	http.DefaultClient = &http.Client{Transport: migrationTransport(func(req *http.Request) (*http.Response, error) {
+		requests++
+		headers := http.Header{}
+		if requests == 2 {
+			headers.Set("X-Cache-Hit", "true")
+		}
+		body := `{"choices":[{"message":{"role":"assistant","content":"ok"}}],"usage":{"prompt_tokens":2000,"prompt_tokens_details":{"cached_tokens":1024,"cache_write_tokens_details":{"ttl_30m_tokens":300,"ttl_12h_tokens":400}}}}`
+		return &http.Response{StatusCode: 200, Header: headers, Body: io.NopCloser(strings.NewReader(body))}, nil
+	})}
+	for i, prompt := range []string{"first", "first", "second"} {
+		_, meta, err := Complete(context.Background(), "test", CompletionInput{Instruct: prompt, NoLog: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if meta.InputTokens != 2000 || meta.InputCachedTokens != 1024 {
+			t.Fatal("original response usage was lost")
+		}
+		if i == 0 {
+			if meta.ProviderInputTokens != 2000 || meta.ProviderCachedTokens != 1024 || meta.ProviderCacheWriteTokens != 700 {
+				t.Fatalf("incorrect provider usage %+v", meta)
+			}
+		} else if meta.ProviderInputTokens != 0 || meta.ProviderCachedTokens != 0 || meta.ProviderCacheWriteTokens != 0 {
+			t.Fatalf("replayed provider usage on call %d", i)
+		}
+	}
+	if requests != 2 {
+		t.Fatalf("gateway requests = %d, want 2", requests)
+	}
+}

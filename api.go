@@ -398,6 +398,7 @@ func postOpenAI(ctx context.Context, url, apikey string, payload []byte, api str
 }
 
 func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
+	req.PromptCacheOptions = nil
 	req.PromptCacheRetention = "24h"
 	if usesOpenAICacheOptions(ToOpenAIModel(req.Model)) {
 		req.PromptCacheRetention = ""

@@ -52,6 +52,9 @@ func ToOpenAIResponsesJSON(req CompletionInput) ([]byte, error) {
 	if !modernCache {
 		out["prompt_cache_retention"] = "24h"
 	}
+	if modernCache && req.PromptCacheOptions != nil {
+		out["prompt_cache_options"] = req.PromptCacheOptions
+	}
 	if req.PromptCacheKey != "" {
 		out["prompt_cache_key"] = req.PromptCacheKey
 	} else if modernCache {

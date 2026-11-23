@@ -446,6 +446,13 @@ type PromptTokensDetails struct {
 	CacheWriteTokensDetails *CacheWriteTokensDetails `json:"cache_write_tokens_details,omitempty"`
 }
 
+func (details *PromptTokensDetails) totalCacheWriteTokens() int64 {
+	if wd := details.CacheWriteTokensDetails; wd != nil {
+		return max(details.CacheWriteTokens, wd.Ttl30mTokens+wd.Ttl12hTokens)
+	}
+	return details.CacheWriteTokens
+}
+
 // CacheWriteTokensDetails breaks cache write tokens down by cache lifetime, only reported by the Responses API
 type CacheWriteTokensDetails struct {
 	Ttl30mTokens int64 `json:"ttl_30m_tokens"`
@@ -510,10 +517,9 @@ func CalculateCost(model string, usage *Usage, service_tier string) int64 {
 	if details := usage.PromptTokensDetails; details != nil {
 		cachedtoken = details.CachedTokens
 		// writes without a breakdown use the default 30m lifetime (the only one chat completion supports)
-		cachewritetoken := details.CacheWriteTokens
+		cachewritetoken := details.totalCacheWriteTokens()
 		if wd := details.CacheWriteTokensDetails; wd != nil {
 			cachewrite12htoken = wd.Ttl12hTokens
-			cachewritetoken = max(cachewritetoken, wd.Ttl30mTokens+wd.Ttl12hTokens)
 		}
 		cachewrite30mtoken = cachewritetoken - cachewrite12htoken
 		inputtoken -= cachedtoken + cachewritetoken
@@ -550,17 +556,21 @@ type EmbeddingOutput struct {
 }
 
 type CompletionOutput struct {
-	Content           string `json:"content"`
-	FinishReason      string `json:"finish_reason,omitempty"`
-	Refusal           string `json:"refusal"`
-	Request           []byte `json:"request"`
-	InputTokens       int64  `json:"input_tokens"`
-	OutputTokens      int64  `json:"output_tokens"`
-	InputCachedTokens int64  `json:"input_cached_tokens"`
-	OuputCachedTokens int64  `json:"output_cached_tokens"`
-	Created           int64  `json:"created"`
-	DurationMs        int64  `json:"duration_ms"`
-	KfpvCostUSD       int64  `json:"kfpv_cost_usd"` // 1 usd -> 1000_000_000 kfpvusd
+	// Provider counters exclude exact response replays from disk and the gateway.
+	ProviderInputTokens      int64  `json:"provider_input_tokens,omitempty"`
+	ProviderCachedTokens     int64  `json:"provider_cached_tokens,omitempty"`
+	ProviderCacheWriteTokens int64  `json:"provider_cache_write_tokens,omitempty"`
+	Content                  string `json:"content"`
+	FinishReason             string `json:"finish_reason,omitempty"`
+	Refusal                  string `json:"refusal"`
+	Request                  []byte `json:"request"`
+	InputTokens              int64  `json:"input_tokens"`
+	OutputTokens             int64  `json:"output_tokens"`
+	InputCachedTokens        int64  `json:"input_cached_tokens"`
+	OuputCachedTokens        int64  `json:"output_cached_tokens"`
+	Created                  int64  `json:"created"`
+	DurationMs               int64  `json:"duration_ms"`
+	KfpvCostUSD              int64  `json:"kfpv_cost_usd"` // 1 usd -> 1000_000_000 kfpvusd
 }
 
 var _apikey string // subiz api key
@@ -579,7 +589,12 @@ type CompletionReasoning struct {
 	MaxTokens int    `json:"max_tokens,omitempty"`
 }
 
+type PromptCacheOptions struct {
+	Mode string `json:"mode,omitempty"`
+}
+
 type CompletionInput struct {
+	PromptCacheOptions   *PromptCacheOptions                 `json:"prompt_cache_options,omitempty"`
 	MaxRequestBytes      int                                 `json:"-"`
 	Seed                 int                                 `json:"seed,omitempty"`
 	Name                 string                              `json:"name,omitempty"` // for logging only
@@ -637,6 +652,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 	completion := &OpenAIChatResponse{}
 
 	var totalCost float64
+	var completionoutput CompletionOutput
 	tokenUsages := []*Usage{}
 
 	// Retrieve the value and assert it as a string
@@ -727,6 +743,13 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 			totalCost += pricef
 			completion = &OpenAIChatResponse{}
 			json.Unmarshal(output, completion)
+			if usage := completion.Usage; usage != nil && resp.Header.Get("X-Cache-Hit") != "true" {
+				completionoutput.ProviderInputTokens += usage.PromptTokens
+				if details := usage.PromptTokensDetails; details != nil {
+					completionoutput.ProviderCachedTokens += details.CachedTokens
+					completionoutput.ProviderCacheWriteTokens += details.totalCacheWriteTokens()
+				}
+			}
 			os.WriteFile(cachepath, output, 0644)
 		}
 
@@ -801,12 +824,10 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		}
 	}
 
-	completionoutput := CompletionOutput{
-		Request:     requestbody,
-		DurationMs:  time.Now().UnixMilli() - start.UnixMilli(),
-		Created:     start.UnixMilli(),
-		KfpvCostUSD: int64(math.Round(totalCost * 1000)),
-	}
+	completionoutput.Request = requestbody
+	completionoutput.DurationMs = time.Now().UnixMilli() - start.UnixMilli()
+	completionoutput.Created = start.UnixMilli()
+	completionoutput.KfpvCostUSD = int64(math.Round(totalCost * 1000))
 
 	for _, tokenUsage := range tokenUsages {
 		completionoutput.InputTokens += tokenUsage.PromptTokens
