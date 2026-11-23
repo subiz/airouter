@@ -827,7 +827,8 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 	}
 
 	if !input.NoLog {
-		log.Info(accid, clientStack, "LLM", cachehit, "[", completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ]", convoid, string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
+		traceid, _ := ctx.Value("trace_id").(string)
+		log.Info(accid, clientStack, "LLM", cachehit, "[", completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ]", log.K(traceid), log.K(convoid), string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
 	}
 
 	return completionoutput.Content, completionoutput, nil
