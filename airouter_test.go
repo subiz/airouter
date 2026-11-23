@@ -35,6 +35,7 @@ func TestRequestConversion(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			tc.Api.Name = "test_request_label"
 			actualJSON, err := ToGeminiRequestJSON(*tc.Api)
 			if err != nil {
 				t.Fatalf("ToGeminiRequestJSON failed: %v", err)

@@ -679,14 +679,8 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		if val, _ := ctx.Value("trace_id").(string); val != "" {
 			q.Set("x-trace-id", val)
 		}
-		purpose := input.Name
-		if purpose == "" {
-			if val, _ := ctx.Value("purpose").(string); val != "" {
-				purpose = val
-			}
-		}
-		if purpose != "" {
-			q.Set("x-purpose", purpose)
+		if input.Name != "" {
+			q.Set("x-name", input.Name)
 		}
 
 		if val, _ := ctx.Value("is-ai-msg").(string); val != "" {
@@ -886,8 +880,8 @@ func GetEmbedding(ctx context.Context, accid, model string, text string) ([]floa
 	if id, _ := ctx.Value("trace_id").(string); id != "" {
 		q.Set("x-trace-id", id)
 	}
-	if id, _ := ctx.Value("purpose").(string); id != "" {
-		q.Set("x-purpose", id)
+	if name, _ := ctx.Value("name").(string); name != "" {
+		q.Set("x-name", name)
 	}
 	if val, _ := ctx.Value("is-ai-msg").(string); val != "" {
 		q.Set("is-ai-msg", val)

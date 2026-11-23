@@ -398,6 +398,7 @@ func postOpenAI(ctx context.Context, url, apikey string, payload []byte, api str
 }
 
 func ToOpenAICompletionJSON(req CompletionInput) ([]byte, error) {
+	req.Name = "" // Internal request label for the gateway and trace.
 	req.PromptCacheOptions = nil
 	req.PromptCacheRetention = "24h"
 	if usesOpenAICacheOptions(ToOpenAIModel(req.Model)) {

@@ -551,6 +551,13 @@ func TestProviderPromptUsageExcludesReplays(t *testing.T) {
 	requests := 0
 	http.DefaultClient = &http.Client{Transport: migrationTransport(func(req *http.Request) (*http.Response, error) {
 		requests++
+		var input CompletionInput
+		if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+			return nil, err
+		}
+		if input.Name != "review" || req.URL.Query().Get("x-name") != input.Name || req.URL.Query().Has("x-purpose") {
+			t.Fatal("gateway must receive the request name in the payload and x-name")
+		}
 		headers := http.Header{}
 		if requests == 2 {
 			headers.Set("X-Cache-Hit", "true")
@@ -559,7 +566,7 @@ func TestProviderPromptUsageExcludesReplays(t *testing.T) {
 		return &http.Response{StatusCode: 200, Header: headers, Body: io.NopCloser(strings.NewReader(body))}, nil
 	})}
 	for i, prompt := range []string{"first", "first", "second"} {
-		_, meta, err := Complete(context.Background(), "test", CompletionInput{Instruct: prompt, NoLog: true})
+		_, meta, err := Complete(context.Background(), "test", CompletionInput{Name: "review", Instruct: prompt, NoLog: true})
 		if err != nil {
 			t.Fatal(err)
 		}
