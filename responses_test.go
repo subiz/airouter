@@ -585,3 +585,49 @@ func TestProviderPromptUsageExcludesReplays(t *testing.T) {
 		t.Fatalf("gateway requests = %d, want 2", requests)
 	}
 }
+
+func TestRequestNameStaysAtGateway(t *testing.T) {
+	oldClient := http.DefaultClient
+	t.Cleanup(func() { http.DefaultClient = oldClient })
+	for _, tc := range []struct{ model, endpoint string }{
+		{Gpt_4o_mini, "https://api.openai.com/v1/chat/completions"},
+		{Gpt_6_luna, "https://api.openai.com/v1/responses"},
+		{Gemini_2_5_flash_lite, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"},
+	} {
+		t.Run(tc.model, func(t *testing.T) {
+			calls := 0
+			http.DefaultClient = &http.Client{Transport: migrationTransport(func(req *http.Request) (*http.Response, error) {
+				calls++
+				if req.URL.String() != tc.endpoint {
+					t.Fatalf("got endpoint %s, want %s", req.URL, tc.endpoint)
+				}
+				var body map[string]json.RawMessage
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				if name, exists := body["name"]; exists {
+					t.Errorf("internal request name reached provider: %s", name)
+				}
+				if !strings.Contains(string(body["tools"]), `"lookup_order"`) {
+					t.Error("provider request lost the tool name")
+				}
+				return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("{}"))}, nil
+			})}
+			input := CompletionInput{
+				Name: "ai_agent_review_and_rewrite", Model: tc.model,
+				Messages: []*header.LLMChatHistoryEntry{{Role: "user", Content: "Hello"}},
+				Tools:    []OpenAITool{{Type: "function", Function: &Function{Name: "lookup_order"}}},
+			}
+			payload, err := json.Marshal(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ChatCompleteAPI(context.Background(), payload); err != nil {
+				t.Fatal(err)
+			}
+			if calls != 1 {
+				t.Fatalf("got %d provider calls, want 1", calls)
+			}
+		})
+	}
+}

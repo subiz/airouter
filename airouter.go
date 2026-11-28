@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	neturl "net/url"
@@ -657,6 +658,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 
 	// Retrieve the value and assert it as a string
 	convoid, _ := ctx.Value("conversation_id").(string)
+	traceid, _ := ctx.Value("trace_id").(string)
 
 	cachehit := "HIT"
 	turn := 0
@@ -676,8 +678,8 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		if convoid != "" {
 			q.Set("x-conversation-id", convoid)
 		}
-		if val, _ := ctx.Value("trace_id").(string); val != "" {
-			q.Set("x-trace-id", val)
+		if traceid != "" {
+			q.Set("x-trace-id", traceid)
 		}
 		if input.Name != "" {
 			q.Set("x-name", input.Name)
@@ -712,9 +714,6 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 				log.Err(accid, err, "CANNOT CACHE")
 			}
 		}
-		if len(cache) == 0 {
-			cachehit = "MISS"
-		}
 
 		if len(cache) > 0 {
 			completion = &OpenAIChatResponse{}
@@ -724,6 +723,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 		}
 
 		if len(cache) == 0 {
+			cachehit = "MISS"
 			resp, output, err := sendPOST(ctx, url, _apikey, requestbody)
 			if err != nil {
 				return "", CompletionOutput{}, log.EProvider(err, "openai", "completion")
@@ -745,6 +745,8 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 				}
 			}
 			os.WriteFile(cachepath, output, 0644)
+		} else if !input.NoLog {
+			log.Info(accid, "llm_completion", string(requestbody), string(cache), log.K(traceid), log.K(convoid), "cached", "elapsed_ms=0", "client_stack="+clientStack)
 		}
 
 		sanitizeCompletion(completion)
@@ -842,8 +844,7 @@ func Complete(ctx context.Context, accid string, input CompletionInput) (string,
 	}
 
 	if !input.NoLog {
-		traceid, _ := ctx.Value("trace_id").(string)
-		log.Info(accid, clientStack, "LLM", cachehit, "[", completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ]", log.K(traceid), log.K(convoid), string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
+		fmt.Println(clientStack, "LLM", cachehit, "[", completionoutput.KfpvCostUSD/1000*USDTOVND/1000000, "đ]", log.K(traceid), log.K(convoid), string(requestbody), ">>>>\n", header.Norm(completionoutput.Content, 1000), "\n<<<")
 	}
 
 	return completionoutput.Content, completionoutput, nil
